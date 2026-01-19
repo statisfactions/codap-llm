@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Probability Explorer - CODAP Plugin</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 15px;
+            background: #fafafa;
+            font-size: 14px;
+        }
+        
+        h1 {
+            font-size: 1.2em;
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .status-bar {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 12px;
+        }
+        
+        .status-loading { background: #fff3cd; color: #856404; }
+        .status-ready { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        
+        .input-section {
+            margin-bottom: 12px;
+        }
+        
+        .input-section label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        #prompt {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: white;
+            background: #7c3aed;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover:not(:disabled) { background: #6d28d9; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        #sampleBtn { background: #10b981; }
+        #sampleBtn:hover:not(:disabled) { background: #059669; }
+        
+        .temp-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #f3e8ff;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        
+        .temp-value {
+            font-weight: bold;
+            color: #7c3aed;
+            font-size: 1.2em;
+        }
+        
+        .generated-text {
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: Georgia, serif;
+            min-height: 40px;
+            line-height: 1.5;
+        }
+        
+        .generated-token {
+            background: #ede9fe;
+            padding: 1px 3px;
+            border-radius: 2px;
+            border-bottom: 2px solid #7c3aed;
+        }
+        
+        .info {
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
+            padding: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        
+        .codap-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .codap-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        
+        .codap-dot.connected { background: #10b981; }
+        
+        #progressBar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        #progressFill {
+            height: 100%;
+            background: #7c3aed;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .hidden { display: none; }
+        
+        #localTempSlider {
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        #debugLog {
+            font-size: 10px;
+            color: #666;
+            max-height: 100px;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 4px;
+            margin-top: 8px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎲 Token Probability Explorer</h1>
+    
+    <div class="codap-status">
+        <span class="codap-dot" id="codapDot"></span>
+        <span id="codapStatus">Connecting to CODAP...</span>
+    </div>
+    
+    <div id="modelStatus" class="status-bar status-loading">
+        ⏳ Waiting to load model...
+    </div>
+    <div id="progressBar" class="hidden">
+        <div id="progressFill"></div>
+    </div>
+    
+    <div class="input-section">
+        <label for="prompt">Prompt:</label>
+        <textarea id="prompt" rows="2">The weather today is</textarea>
+    </div>
+    
+    <div class="temp-display" id="tempSection">
+        <span>Temperature:</span>
+        <span class="temp-value" id="tempDisplay">1.0</span>
+        <span style="color: #666; font-size: 11px;">(loading...)</span>
+    </div>
+    
+    <div class="controls">
+        <button id="predictBtn" disabled>🔮 Get Probabilities</button>
+        <button id="sampleBtn" disabled>🎲 Sample & Continue</button>
+        <button id="resetBtn" style="background: #6b7280;">🔄 Reset</button>
+    </div>
+    
+    <div class="generated-text">
+        <span id="originalPrompt"></span><span id="generatedTokens"></span>
+    </div>
+    
+    <div class="info">
+        <strong>How to use:</strong> Click "Get Probabilities" to see the next-token distribution in CODAP. 
+        Adjust the Temperature slider to change randomness. Click "Sample" to pick a token and continue.
+    </div>
+    
+    <div id="debugLog"></div>
+
+    <!-- CODAP Plugin API -->
+    <script src="https://codap.concord.org/releases/latest/codap-plugin-api.js"></script>
+    
+    <script>
+        // ============================================
+        // Debug logging
+        // ============================================
+        function log(msg) {
+            console.log(msg);
+            var debugEl = document.getElementById('debugLog');
+            debugEl.innerHTML += msg + '<br>';
+            debugEl.scrollTop = debugEl.scrollHeight;
+        }
+        
+        // ============================================
+        // Global State
+        // ============================================
+        var tokenizer = null;
+        var model = null;
+        var currentLogits = null;
+        var generatedTokens = [];
+        var originalPrompt = '';
+        var temperature = 1.0;
+        var codapConnected = false;
+        var predictionCount = 0;
+        var dataContextName = 'TokenProbs';
+        
+        var MODEL_ID = 'HuggingFaceTB/SmolLM2-135M-Instruct';
+        
+        // ============================================
+        // DOM Elements
+        // ============================================
+        var modelStatusEl = document.getElementById('modelStatus');
+        var progressBar = document.getElementById('progressBar');
+        var progressFill = document.getElementById('progressFill');
+        var promptEl = document.getElementById('prompt');
+        var tempDisplay = document.getElementById('tempDisplay');
+        var tempSection = document.getElementById('tempSection');
+        var predictBtn = document.getElementById('predictBtn');
+        var sampleBtn = document.getElementById('sampleBtn');
+        var resetBtn = document.getElementById('resetBtn');
+        var originalPromptEl = document.getElementById('originalPrompt');
+        var generatedTokensEl = document.getElementById('generatedTokens');
+        var codapDot = document.getElementById('codapDot');
+        var codapStatusEl = document.getElementById('codapStatus');
+        
+        // ============================================
+        // CODAP Integration
+        // ============================================
+        
+        function initCODAP() {
+            log('initCODAP called');
+            
+            if (typeof codapInterface === 'undefined') {
+                log('codapInterface not found - standalone mode');
+                codapStatusEl.textContent = 'Standalone mode';
+                addLocalTemperatureSlider();
+                loadModel();
+                return;
+            }
+            
+            log('codapInterface found, calling init...');
+            
+            codapInterface.init({
+                name: dataContextName,
+                title: 'Token Probability Explorer',
+                version: '1.0',
+                dimensions: { width: 400, height: 520 },
+                preventDataContextReorg: false
+            }).then(function(result) {
+                log('init result: ' + JSON.stringify(result));
+                
+                if (result && result.success) {
+                    codapConnected = true;
+                    codapDot.classList.add('connected');
+                    codapStatusEl.textContent = 'Connected to CODAP';
+                    
+                    createDataContext();
+                } else {
+                    log('init failed: ' + JSON.stringify(result));
+                    codapStatusEl.textContent = 'Connection failed - standalone';
+                    addLocalTemperatureSlider();
+                    loadModel();
+                }
+            }).catch(function(err) {
+                log('init error: ' + err);
+                codapStatusEl.textContent = 'Error - standalone mode';
+                addLocalTemperatureSlider();
+                loadModel();
+            });
+        }
+        
+        function createDataContext() {
+            log('Creating data context...');
+            
+            codapInterface.sendRequest({
+                action: 'create',
+                resource: 'dataContext',
+                values: {
+                    name: dataContextName,
+                    title: 'Token Probabilities',
+                    collections: [{
+                        name: 'tokens',
+                        title: 'Tokens',
+                        attrs: [
+                            { name: 'prediction', title: 'Pred#', type: 'numeric' },
+                            { name: 'rank', title: 'Rank', type: 'numeric' },
+                            { name: 'token', title: 'Token', type: 'categorical' },
+                            { name: 'probability', title: 'Probability', type: 'numeric', precision: 4 },
+                            { name: 'percentage', title: 'Percent', type: 'numeric', precision: 2 },
+                            { name: 'temperature', title: 'Temp', type: 'numeric', precision: 2 }
+                        ]
+                    }]
+                }
+            }).then(function(result) {
+                log('dataContext result: ' + JSON.stringify(result));
+                createTableAndSlider();
+            }).catch(function(err) {
+                log('dataContext error: ' + err);
+                createTableAndSlider();
+            });
+        }
+        
+        function createTableAndSlider() {
+            log('Creating table component...');
+            
+            // Create case table
+            codapInterface.sendRequest({
+                action: 'create',
+                resource: 'component',
+                values: {
+                    type: 'caseTable',
+                    dataContext: dataContextName
+                }
+            }).then(function(result) {
+                log('table result: ' + JSON.stringify(result));
+            }).catch(function(err) {
+                log('table error: ' + err);
+            });
+            
+            // Create global for temperature
+            log('Creating temperature global...');
+            codapInterface.sendRequest({
+                action: 'create',
+                resource: 'global',
+                values: {
+                    name: 'Temperature',
+                    value: 1.0
+                }
+            }).then(function(result) {
+                log('global result: ' + JSON.stringify(result));
+                
+                // Create slider
+                return codapInterface.sendRequest({
+                    action: 'create',
+                    resource: 'component',
+                    values: {
+                        type: 'slider',
+                        globalValueName: 'Temperature',
+                        lowerBound: 0.1,
+                        upperBound: 2.0
+                    }
+                });
+            }).then(function(result) {
+                log('slider result: ' + JSON.stringify(result));
+                
+                // Subscribe to temperature changes
+                codapInterface.on('notify', 'global[Temperature]', handleTemperatureChange);
+                
+                tempSection.innerHTML = '<span>Temperature:</span><span class="temp-value" id="tempDisplay">1.0</span><span style="color: #666; font-size: 11px;">(use CODAP slider)</span>';
+                
+                // Now load model
+                loadModel();
+            }).catch(function(err) {
+                log('slider error: ' + err);
+                addLocalTemperatureSlider();
+                loadModel();
+            });
+        }
+        
+        function handleTemperatureChange(notification) {
+            log('temp change: ' + JSON.stringify(notification));
+            if (notification && notification.values && typeof notification.values.value === 'number') {
+                temperature = notification.values.value;
+                var el = document.getElementById('tempDisplay');
+                if (el) el.textContent = temperature.toFixed(2);
+            }
+        }
+        
+        function sendProbabilitiesToCODAP(topK) {
+            if (!codapConnected) {
+                log('Not connected, skipping send');
+                return;
+            }
+            
+            predictionCount++;
+            log('Sending prediction #' + predictionCount + ' with ' + topK.length + ' tokens');
+            
+            // Create flat items (simpler than hierarchical)
+            var items = topK.map(function(item, idx) {
+                return {
+                    prediction: predictionCount,
+                    rank: idx + 1,
+                    token: item.tokenStr,
+                    probability: item.value,
+                    percentage: item.value * 100,
+                    temperature: temperature
+                };
+            });
+            
+            codapInterface.sendRequest({
+                action: 'create',
+                resource: 'dataContext[' + dataContextName + '].item',
+                values: items
+            }).then(function(result) {
+                log('items created: ' + (result.success ? 'success' : 'failed'));
+            }).catch(function(err) {
+                log('items error: ' + err);
+            });
+        }
+        
+        function addLocalTemperatureSlider() {
+            tempSection.innerHTML = 
+                '<span>Temperature:</span>' +
+                '<input type="range" id="localTempSlider" min="0.1" max="2.0" step="0.1" value="1.0">' +
+                '<span class="temp-value" id="tempDisplay">1.0</span>';
+            
+            document.getElementById('localTempSlider').addEventListener('input', function(e) {
+                temperature = parseFloat(e.target.value);
+                document.getElementById('tempDisplay').textContent = temperature.toFixed(1);
+            });
+        }
+        
+        // ============================================
+        // Math Functions
+        // ============================================
+        
+        function softmaxTypedArray(logits, temp) {
+            var n = logits.length;
+            var result = new Float32Array(n);
+            
+            var max = -Infinity;
+            for (var i = 0; i < n; i++) {
+                var scaled = logits[i] / temp;
+                if (scaled > max) max = scaled;
+            }
+            
+            var sum = 0;
+            for (var i = 0; i < n; i++) {
+                result[i] = Math.exp(logits[i] / temp - max);
+                sum += result[i];
+            }
+            
+            for (var i = 0; i < n; i++) {
+                result[i] /= sum;
+            }
+            
+            return result;
+        }
+        
+        function getTopKFromTypedArray(probs, k) {
+            var topK = [];
+            
+            for (var i = 0; i < probs.length; i++) {
+                var val = probs[i];
+                
+                if (topK.length < k) {
+                    topK.push({ index: i, value: val });
+                    topK.sort(function(a, b) { return b.value - a.value; });
+                } else if (val > topK[k - 1].value) {
+                    topK[k - 1] = { index: i, value: val };
+                    topK.sort(function(a, b) { return b.value - a.value; });
+                }
+            }
+            
+            return topK;
+        }
+        
+        function sampleFromTypedArray(probs) {
+            var r = Math.random();
+            var cumulative = 0;
+            for (var i = 0; i < probs.length; i++) {
+                cumulative += probs[i];
+                if (r < cumulative) {
+                    return i;
+                }
+            }
+            return probs.length - 1;
+        }
+        
+        function decodeToken(tokenId) {
+            var decoded = tokenizer.decode([tokenId], { skip_special_tokens: false });
+            return decoded
+                .replace(/\n/g, '↵')
+                .replace(/\t/g, '→')
+                .replace(/^ /, '␣');
+        }
+        
+        // ============================================
+        // Model Loading
+        // ============================================
+        
+        async function loadModel() {
+            try {
+                modelStatusEl.textContent = '⏳ Loading transformers.js...';
+                progressBar.classList.remove('hidden');
+                progressFill.style.width = '10%';
+                
+                var transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2');
+                var AutoTokenizer = transformers.AutoTokenizer;
+                var AutoModelForCausalLM = transformers.AutoModelForCausalLM;
+                
+                modelStatusEl.textContent = '⏳ Loading tokenizer...';
+                progressFill.style.width = '20%';
+                
+                tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID);
+                
+                modelStatusEl.textContent = '⏳ Loading model (~300MB)...';
+                progressFill.style.width = '30%';
+                
+                model = await AutoModelForCausalLM.from_pretrained(MODEL_ID, {
+                    dtype: 'q4',
+                    progress_callback: function(progress) {
+                        if (progress.status === 'progress') {
+                            var pct = Math.round(30 + (progress.progress * 70));
+                            progressFill.style.width = pct + '%';
+                        }
+                    }
+                });
+                
+                modelStatusEl.textContent = '✅ Model ready';
+                modelStatusEl.className = 'status-bar status-ready';
+                progressBar.classList.add('hidden');
+                
+                predictBtn.disabled = false;
+                log('Model loaded');
+                
+            } catch (error) {
+                log('Model error: ' + error.message);
+                modelStatusEl.textContent = '❌ ' + error.message;
+                modelStatusEl.className = 'status-bar status-error';
+                progressBar.classList.add('hidden');
+            }
+        }
+        
+        // ============================================
+        // Main Logic
+        // ============================================
+        
+        async function getProbabilities() {
+            if (!model || !tokenizer) return;
+            
+            predictBtn.disabled = true;
+            predictBtn.textContent = '⏳...';
+            
+            try {
+                var prompt = promptEl.value;
+                
+                if (generatedTokens.length === 0) {
+                    originalPrompt = prompt;
+                    originalPromptEl.textContent = prompt;
+                    generatedTokensEl.innerHTML = '';
+                }
+                
+                var inputs = tokenizer(prompt, { return_tensors: 'pt' });
+                var output = await model.forward(inputs);
+                
+                var logitsData = output.logits.data;
+                var vocabSize = output.logits.dims[2];
+                var seqLen = inputs.input_ids.data.length;
+                
+                var startIdx = (seqLen - 1) * vocabSize;
+                currentLogits = logitsData.slice(startIdx, startIdx + vocabSize);
+                
+                var probs = softmaxTypedArray(currentLogits, temperature);
+                var topK = getTopKFromTypedArray(probs, 15);
+                
+                topK.forEach(function(item) {
+                    item.tokenStr = decodeToken(item.index);
+                });
+                
+                sendProbabilitiesToCODAP(topK);
+                
+                log('Top: ' + topK[0].tokenStr + ' (' + (topK[0].value*100).toFixed(1) + '%)');
+                
+                sampleBtn.disabled = false;
+                
+            } catch (error) {
+                log('Predict error: ' + error.message);
+            }
+            
+            predictBtn.disabled = false;
+            predictBtn.textContent = '🔮 Get Probabilities';
+        }
+        
+        async function sampleToken() {
+            if (!currentLogits) return;
+            
+            var probs = softmaxTypedArray(currentLogits, temperature);
+            var sampledIdx = sampleFromTypedArray(probs);
+            var sampledTokenRaw = tokenizer.decode([sampledIdx]);
+            
+            generatedTokens.push({ id: sampledIdx, token: sampledTokenRaw });
+            
+            var tokenSpan = document.createElement('span');
+            tokenSpan.className = 'generated-token';
+            tokenSpan.textContent = sampledTokenRaw;
+            generatedTokensEl.appendChild(tokenSpan);
+            
+            promptEl.value = originalPrompt + generatedTokens.map(function(t) { return t.token; }).join('');
+            
+            await getProbabilities();
+        }
+        
+        function reset() {
+            generatedTokens = [];
+            promptEl.value = originalPrompt || 'The weather today is';
+            originalPrompt = '';
+            originalPromptEl.textContent = '';
+            generatedTokensEl.innerHTML = '';
+            currentLogits = null;
+            sampleBtn.disabled = true;
+        }
+        
+        // ============================================
+        // Event Listeners
+        // ============================================
+        
+        predictBtn.addEventListener('click', getProbabilities);
+        sampleBtn.addEventListener('click', sampleToken);
+        resetBtn.addEventListener('click', reset);
+        
+        promptEl.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey && !predictBtn.disabled) {
+                e.preventDefault();
+                getProbabilities();
+            }
+        });
+        
+        // ============================================
+        // Initialize
+        // ============================================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            log('DOM ready');
+            setTimeout(initCODAP, 100);
+        });
+    </script>
+</body>
+</html>
