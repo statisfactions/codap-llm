@@ -1241,7 +1241,7 @@ async function loadModel() {
         progressBar.classList.add('hidden');
         parseBtn.disabled = false;
         
-        log('Model loaded successfully');
+        log('Model loaded: ' + MODEL_ID);
         
     } catch (error) {
         log('Model error: ' + error.message);
