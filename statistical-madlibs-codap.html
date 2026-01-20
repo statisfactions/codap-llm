@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/iframe-phone@1.2.0/dist/iframe-phone.js"></script>
+    <title>Statistical Mad Libs - CODAP Plugin</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap');
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --bg-cream: #faf8f5;
+            --bg-warm: #f5f0e8;
+            --text-dark: #2d2a26;
+            --text-muted: #6b6560;
+            --accent-teal: #1d7a8c;
+            --accent-teal-light: #e8f4f6;
+            --accent-coral: #d35f5f;
+            --accent-coral-light: #fdf0f0;
+            --accent-gold: #c9a227;
+            --accent-gold-light: #fdf8e8;
+            --slot-purple: #7c5cbf;
+            --slot-purple-light: #f3f0fa;
+            --border-light: #e5e0d8;
+            --shadow-soft: 0 2px 8px rgba(45, 42, 38, 0.08);
+            --shadow-medium: 0 4px 16px rgba(45, 42, 38, 0.12);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+        }
+        
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg-cream);
+            color: var(--text-dark);
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 16px;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .header h1 {
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 1.4em;
+            font-weight: 600;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .header h1 span { font-size: 1.2em; }
+        
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            background: var(--bg-warm);
+            border-radius: 20px;
+        }
+        
+        .connection-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        
+        .connection-dot.connected { background: #22c55e; }
+        
+        /* Status Bar */
+        .status-bar {
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            margin-bottom: 14px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-loading { background: var(--accent-gold-light); color: #92710a; }
+        .status-ready { background: #e8f5e9; color: #2e7d32; }
+        .status-error { background: var(--accent-coral-light); color: #b33b3b; }
+        
+        .progress-container {
+            height: 4px;
+            background: var(--border-light);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-teal), var(--slot-purple));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        /* Template Section */
+        .section {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-soft);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        
+        .template-input {
+            width: 100%;
+            padding: 12px;
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 16px;
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-md);
+            background: var(--bg-cream);
+            resize: vertical;
+            min-height: 60px;
+            transition: border-color 0.2s;
+        }
+        
+        .template-input:focus {
+            outline: none;
+            border-color: var(--accent-teal);
+        }
+        
+        .template-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-style: italic;
+        }
+        
+        /* Sentence Display */
+        .sentence-display {
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 18px;
+            line-height: 1.8;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--bg-warm) 0%, white 100%);
+            border-radius: var(--radius-md);
+            min-height: 60px;
+        }
+        
+        .slot {
+            display: inline-block;
+            padding: 2px 10px;
+            margin: 2px 4px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .slot.empty {
+            background: var(--slot-purple-light);
+            border: 2px dashed var(--slot-purple);
+            color: var(--slot-purple);
+            font-style: italic;
+        }
+        
+        .slot.filled {
+            background: var(--accent-teal-light);
+            border: 2px solid var(--accent-teal);
+            color: var(--accent-teal);
+            font-weight: 600;
+        }
+        
+        .slot.active {
+            box-shadow: 0 0 0 3px rgba(125, 92, 191, 0.3);
+            transform: scale(1.02);
+        }
+        
+        .slot:hover:not(.locked) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .slot.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .slot-prob {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--accent-gold);
+            color: white;
+            font-size: 9px;
+            font-weight: 600;
+            padding: 2px 5px;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+        }
+        
+        /* Controls */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        
+        .control-group {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 12px;
+        }
+        
+        .control-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .control-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent-teal);
+        }
+        
+        .slider-track {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-light);
+            position: relative;
+            margin-top: 8px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: transparent;
+            margin-top: 8px;
+        }
+        
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 6px;
+            background: linear-gradient(90deg, var(--accent-teal-light), var(--accent-teal));
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border: 3px solid var(--accent-teal);
+            border-radius: 50%;
+            margin-top: -6px;
+            cursor: pointer;
+            box-shadow: var(--shadow-soft);
+        }
+        
+        input[type="number"] {
+            width: 60px;
+            padding: 6px 8px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            text-align: center;
+        }
+        
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--slot-purple), #9575cd);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .btn-sample {
+            background: linear-gradient(135deg, var(--accent-teal), #26a69a);
+            color: white;
+        }
+        
+        .btn-sample:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-warm);
+            color: var(--text-dark);
+            border: 1px solid var(--border-light);
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--border-light);
+        }
+        
+        .btn-danger {
+            background: var(--accent-coral-light);
+            color: var(--accent-coral);
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: var(--accent-coral);
+            color: white;
+        }
+        
+        /* Candidate Panel */
+        .candidates-panel {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 14px;
+            display: none;
+        }
+        
+        .candidates-panel.visible { display: block; }
+        
+        .candidates-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .candidates-title {
+            font-weight: 600;
+            color: var(--slot-purple);
+        }
+        
+        .candidates-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .candidate-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: var(--bg-cream);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .candidate-item:hover {
+            background: var(--accent-teal-light);
+            transform: translateX(3px);
+        }
+        
+        .candidate-rank {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            width: 20px;
+        }
+        
+        .candidate-word {
+            flex: 1;
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .candidate-bar-container {
+            flex: 1;
+            height: 8px;
+            background: var(--border-light);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .candidate-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-teal), var(--slot-purple));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .candidate-prob {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-teal);
+            min-width: 45px;
+            text-align: right;
+        }
+        
+        /* Sampling Controls */
+        .sampling-section {
+            background: linear-gradient(135deg, var(--slot-purple-light), var(--accent-teal-light));
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        
+        .sampling-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .sampling-row:last-child { margin-bottom: 0; }
+        
+        .sampling-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-dark);
+            min-width: 140px;
+        }
+        
+        .sampling-desc {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+        
+        /* Debug Log */
+        .debug-log {
+            font-size: 10px;
+            color: var(--text-muted);
+            background: var(--bg-warm);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 8px;
+            max-height: 100px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, monospace;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        
+        /* Path Score Display */
+        .path-score {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: var(--accent-gold-light);
+            border-radius: var(--radius-md);
+            margin-top: 10px;
+        }
+        
+        .path-score-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        
+        .path-score-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+        
+        .hidden { display: none !important; }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .loading { animation: pulse 1.5s ease-in-out infinite; }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in { animation: slideIn 0.3s ease-out; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span>🎰</span> Statistical Mad Libs</h1>
+        <div class="connection-badge">
+            <span class="connection-dot" id="codapDot"></span>
+            <span id="codapStatus">Initializing...</span>
+        </div>
+    </div>
+    
+    <div id="modelStatus" class="status-bar status-loading">
+        <span>⏳</span> Loading language model...
+    </div>
+    <div class="progress-container" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+    
+    <!-- Template Input -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-title">📝 Template</span>
+            <button class="btn btn-secondary" id="parseBtn" style="padding: 6px 12px; font-size: 11px;">
+                Parse Template
+            </button>
+        </div>
+        <textarea class="template-input" id="templateInput" rows="2">The [Animal] sat on the [Object] and felt very [Emotion].</textarea>
+        <div class="template-hint">Use [SlotName] to create blanks. Example: The [Animal] jumped over the [Object].</div>
+    </div>
+    
+    <!-- Live Sentence Display -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-title">📖 Your Sentence</span>
+            <div class="path-score" id="pathScoreDisplay" style="display: none; margin: 0; padding: 6px 10px;">
+                <span class="path-score-label">Path Score:</span>
+                <span class="path-score-value" id="pathScoreValue">—</span>
+            </div>
+        </div>
+        <div class="sentence-display" id="sentenceDisplay">
+            <span class="text-segment">Click "Parse Template" to begin</span>
+        </div>
+    </div>
+    
+    <!-- Controls -->
+    <div class="controls-grid">
+        <div class="control-group">
+            <div class="control-label">
+                <span>🌡️ Temperature</span>
+                <span class="control-value" id="tempValue">1.0</span>
+            </div>
+            <input type="range" id="tempSlider" min="0.1" max="2.0" step="0.05" value="1.0">
+        </div>
+        <div class="control-group">
+            <div class="control-label">
+                <span>🎯 Top-K</span>
+                <span class="control-value" id="topKValue">10</span>
+            </div>
+            <input type="range" id="topKSlider" min="3" max="20" step="1" value="10">
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-title">🎮 Actions</span>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="getProbsBtn" disabled>
+                📊 Get Probabilities
+            </button>
+            <button class="btn btn-sample" id="sampleSlotBtn" disabled>
+                🎲 Sample This Slot
+            </button>
+            <button class="btn btn-secondary" id="refreshBtn" disabled>
+                🔄 Refresh Downstream
+            </button>
+            <button class="btn btn-danger" id="resetBtn">
+                ✖ Reset All
+            </button>
+        </div>
+    </div>
+    
+    <!-- Candidates Panel -->
+    <div class="candidates-panel" id="candidatesPanel">
+        <div class="candidates-header">
+            <span class="candidates-title" id="candidatesTitle">Candidates for [Slot]</span>
+            <button class="btn btn-secondary" id="closeCandidates" style="padding: 4px 10px; font-size: 11px;">✕ Close</button>
+        </div>
+        <div class="candidates-list" id="candidatesList"></div>
+    </div>
+    
+    <!-- Sampling Section -->
+    <div class="sampling-section">
+        <div class="section-header" style="margin-bottom: 12px;">
+            <span class="section-title">🔬 Sampling Experiments</span>
+        </div>
+        
+        <div class="sampling-row">
+            <span class="sampling-label">Slot-Level Samples:</span>
+            <input type="number" id="slotSampleN" min="1" max="100" value="20">
+            <button class="btn btn-sample" id="slotSampleBtn" disabled style="padding: 6px 12px;">
+                Run N Samples
+            </button>
+            <span class="sampling-desc">Sample this slot N times</span>
+        </div>
+        
+        <div class="sampling-row">
+            <span class="sampling-label">Sequence-Level Samples:</span>
+            <input type="number" id="seqSampleN" min="1" max="50" value="10">
+            <button class="btn btn-sample" id="seqSampleBtn" disabled style="padding: 6px 12px;">
+                Generate N Sentences
+            </button>
+            <span class="sampling-desc">Complete full sentences</span>
+        </div>
+    </div>
+    
+    <div class="debug-log" id="debugLog"></div>
+
+<script>
+// ============================================
+// CODAP Interface (iframe-phone)
+// ============================================
+
+var codapInterface = (function() {
+    var phone = null;
+    var connected = false;
+    var notificationSubscribers = {};
+
+    function notificationHandler(request, callback) {
+        var action = request.action;
+        var resource = request.resource;
+        
+        if (action === 'notify' && notificationSubscribers[resource]) {
+            notificationSubscribers[resource].forEach(function(handler) {
+                handler(request);
+            });
+        }
+        
+        if (callback) callback({ success: true });
+    }
+    
+    return {
+        init: function(config) {
+            log('codapInterface.init called');
+            
+            if (window.parent === window) {
+                log('Not in iframe - standalone mode');
+                return Promise.resolve({ success: false });
+            }
+            
+            return new Promise(function(resolve) {
+                phone = new iframePhone.IframePhoneRpcEndpoint(
+                    notificationHandler, 
+                    "data-interactive", 
+                    window.parent
+                );
+
+                phone.call({
+                    action: 'update',
+                    resource: 'interactiveFrame',
+                    values: {
+                        name: config.name || 'Plugin',
+                        title: config.title || 'Plugin',
+                        version: config.version || '1.0',
+                        dimensions: config.dimensions || { width: 450, height: 700 },
+                        preventDataContextReorg: config.preventDataContextReorg || false
+                    }
+                }, function(result) {
+                    if (result && result.success) {
+                        connected = true;
+                        log('✅ CODAP connected');
+                        resolve({ success: true });
+                    } else {
+                        log('❌ Connection failed');
+                        resolve({ success: false });
+                    }
+                });
+                
+                setTimeout(function() {
+                    if (!connected) {
+                        log('Connection timed out');
+                        resolve({ success: false });
+                    }
+                }, 5000);
+            });
+        },
+        
+        sendRequest: function(request) {
+            return new Promise(function(resolve) {
+                if (!phone || !connected) {
+                    resolve({ success: false, error: 'Not connected' });
+                    return;
+                }
+                
+                phone.call(request, function(response) {
+                    resolve(response);
+                });
+            });
+        },
+        
+        on: function(action, resource, handler) {
+            if (action === 'notify') {
+                if (!notificationSubscribers[resource]) {
+                    notificationSubscribers[resource] = [];
+                }
+                notificationSubscribers[resource].push(handler);
+                
+                if (connected) {
+                    this.sendRequest({
+                        action: 'register',
+                        resource: resource,
+                        values: { operations: ['all'] }
+                    });
+                }
+            }
+        },
+        
+        isConnected: function() {
+            return connected;
+        }
+    };
+})();
+
+function log(msg) {
+    console.log('[MadLibs] ' + msg);
+    var el = document.getElementById('debugLog');
+    if (el) {
+        var time = new Date().toLocaleTimeString();
+        el.textContent += '[' + time + '] ' + msg + '\n';
+        el.scrollTop = el.scrollHeight;
+    }
+}
+
+// ============================================
+// Global State
+// ============================================
+
+var tokenizer = null;
+var model = null;
+var codapConnected = false;
+
+var MODEL_ID = 'HuggingFaceTB/SmolLM2-135M-Instruct';
+
+// Template state
+var templateText = '';
+var slots = [];           // Array of {name, index, startPos, endPos, word, probability, candidates}
+var activeSlotIndex = -1;
+var runCounter = 0;
+
+// Parameters
+var temperature = 1.0;
+var topK = 10;
+
+// System prompt for completion mode
+var SYSTEM_PROMPT = 'Complete the following text naturally with a single word. Only output the completion word, nothing else.';
+
+// ============================================
+// DOM References
+// ============================================
+
+var modelStatusEl, progressBar, progressFill;
+var templateInput, sentenceDisplay;
+var tempSlider, tempValue, topKSlider, topKValue;
+var parseBtn, getProbsBtn, sampleSlotBtn, refreshBtn, resetBtn;
+var candidatesPanel, candidatesList, candidatesTitle, closeCandidates;
+var slotSampleN, slotSampleBtn, seqSampleN, seqSampleBtn;
+var pathScoreDisplay, pathScoreValue;
+var codapDot, codapStatus;
+
+function initDOMRefs() {
+    modelStatusEl = document.getElementById('modelStatus');
+    progressBar = document.getElementById('progressBar');
+    progressFill = document.getElementById('progressFill');
+    templateInput = document.getElementById('templateInput');
+    sentenceDisplay = document.getElementById('sentenceDisplay');
+    tempSlider = document.getElementById('tempSlider');
+    tempValue = document.getElementById('tempValue');
+    topKSlider = document.getElementById('topKSlider');
+    topKValue = document.getElementById('topKValue');
+    parseBtn = document.getElementById('parseBtn');
+    getProbsBtn = document.getElementById('getProbsBtn');
+    sampleSlotBtn = document.getElementById('sampleSlotBtn');
+    refreshBtn = document.getElementById('refreshBtn');
+    resetBtn = document.getElementById('resetBtn');
+    candidatesPanel = document.getElementById('candidatesPanel');
+    candidatesList = document.getElementById('candidatesList');
+    candidatesTitle = document.getElementById('candidatesTitle');
+    closeCandidates = document.getElementById('closeCandidates');
+    slotSampleN = document.getElementById('slotSampleN');
+    slotSampleBtn = document.getElementById('slotSampleBtn');
+    seqSampleN = document.getElementById('seqSampleN');
+    seqSampleBtn = document.getElementById('seqSampleBtn');
+    pathScoreDisplay = document.getElementById('pathScoreDisplay');
+    pathScoreValue = document.getElementById('pathScoreValue');
+    codapDot = document.getElementById('codapDot');
+    codapStatus = document.getElementById('codapStatus');
+}
+
+// ============================================
+// CODAP Data Setup - Hierarchical Structure
+// ============================================
+
+var DATA_CONTEXT_NAME = 'MadLibsData';
+
+async function createDataContext() {
+    log('Creating hierarchical data context...');
+    
+    // Create data context with parent-child structure
+    var result = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext',
+        values: {
+            name: DATA_CONTEXT_NAME,
+            title: 'Mad Libs Data',
+            collections: [
+                {
+                    name: 'Sentences',
+                    title: 'Sentences (Runs)',
+                    attrs: [
+                        { name: 'Run_ID', title: 'Run', type: 'categorical' },
+                        { name: 'Full_Sentence', title: 'Sentence', type: 'categorical' },
+                        { name: 'Path_Score', title: 'Path Score', type: 'numeric', precision: 6 },
+                        { name: 'Temperature', title: 'Temperature', type: 'numeric', precision: 2 },
+                        { name: 'Sample_Type', title: 'Type', type: 'categorical' }
+                    ]
+                },
+                {
+                    name: 'Slots',
+                    title: 'Slots (Choices)',
+                    parent: 'Sentences',
+                    attrs: [
+                        { name: 'Slot_Name', title: 'Slot', type: 'categorical' },
+                        { name: 'Slot_Index', title: 'Position', type: 'numeric' },
+                        { name: 'Word_Chosen', title: 'Word', type: 'categorical' },
+                        { name: 'Word_Probability', title: 'Probability', type: 'numeric', precision: 4 },
+                        { name: 'Word_Percentage', title: 'Percent', type: 'numeric', precision: 2 }
+                    ]
+                }
+            ]
+        }
+    });
+    
+    log('Data context result: ' + JSON.stringify(result));
+    
+    // Create a table
+    await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'component',
+        values: { type: 'caseTable', dataContext: DATA_CONTEXT_NAME }
+    });
+    
+    // Create probability distribution context for bar charts
+    await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext',
+        values: {
+            name: 'SlotDistributions',
+            title: 'Slot Probability Distributions',
+            collections: [{
+                name: 'Candidates',
+                title: 'Candidate Words',
+                attrs: [
+                    { name: 'Query_ID', title: 'Query', type: 'categorical' },
+                    { name: 'Slot_Name', title: 'Slot', type: 'categorical' },
+                    { name: 'Context', title: 'Context', type: 'categorical' },
+                    { name: 'Rank', title: 'Rank', type: 'numeric' },
+                    { name: 'Word', title: 'Word', type: 'categorical' },
+                    { name: 'Probability', title: 'Probability', type: 'numeric', precision: 4 },
+                    { name: 'Percentage', title: 'Percent', type: 'numeric', precision: 2 },
+                    { name: 'Temperature', title: 'Temp', type: 'numeric', precision: 2 }
+                ]
+            }]
+        }
+    });
+    
+    // Create CODAP sliders for Temperature and TopK
+    await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'global',
+        values: { name: 'Temperature', value: 1.0 }
+    });
+    
+    await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'component',
+        values: { type: 'slider', globalValueName: 'Temperature', lowerBound: 0.1, upperBound: 2.0 }
+    });
+    
+    await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'global',
+        values: { name: 'TopK', value: 10 }
+    });
+    
+    await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'component',
+        values: { type: 'slider', globalValueName: 'TopK', lowerBound: 3, upperBound: 20 }
+    });
+    
+    // Subscribe to slider changes
+    codapInterface.on('notify', 'global[Temperature]', function(notification) {
+        if (notification && notification.values && typeof notification.values.value === 'number') {
+            temperature = notification.values.value;
+            tempValue.textContent = temperature.toFixed(2);
+            tempSlider.value = temperature;
+        }
+    });
+    
+    codapInterface.on('notify', 'global[TopK]', function(notification) {
+        if (notification && notification.values && typeof notification.values.value === 'number') {
+            topK = Math.round(notification.values.value);
+            topKValue.textContent = topK;
+            topKSlider.value = topK;
+        }
+    });
+}
+
+// ============================================
+// Math Functions
+// ============================================
+
+function softmaxWithTemperature(logits, temp) {
+    var n = logits.length;
+    var result = new Float32Array(n);
+    var max = -Infinity;
+    
+    for (var i = 0; i < n; i++) {
+        var scaled = logits[i] / temp;
+        if (scaled > max) max = scaled;
+    }
+    
+    var sum = 0;
+    for (var i = 0; i < n; i++) {
+        result[i] = Math.exp(logits[i] / temp - max);
+        sum += result[i];
+    }
+    
+    for (var i = 0; i < n; i++) {
+        result[i] /= sum;
+    }
+    
+    return result;
+}
+
+function getTopKTokens(probs, k) {
+    var topK = [];
+    for (var i = 0; i < probs.length; i++) {
+        var val = probs[i];
+        if (topK.length < k) {
+            topK.push({ tokenId: i, probability: val });
+            topK.sort(function(a, b) { return b.probability - a.probability; });
+        } else if (val > topK[k - 1].probability) {
+            topK[k - 1] = { tokenId: i, probability: val };
+            topK.sort(function(a, b) { return b.probability - a.probability; });
+        }
+    }
+    return topK;
+}
+
+function sampleFromDistribution(probs) {
+    var r = Math.random();
+    var cumulative = 0;
+    for (var i = 0; i < probs.length; i++) {
+        cumulative += probs[i];
+        if (r < cumulative) return i;
+    }
+    return probs.length - 1;
+}
+
+function sampleFromTopK(candidates, temp) {
+    // Re-normalize probabilities among top-K candidates
+    var probs = candidates.map(c => c.probability);
+    var sum = probs.reduce((a, b) => a + b, 0);
+    var normalized = probs.map(p => p / sum);
+    
+    // Apply temperature to the normalized distribution
+    if (temp !== 1.0) {
+        var logProbs = normalized.map(p => Math.log(p + 1e-10));
+        var scaled = logProbs.map(lp => lp / temp);
+        var maxScaled = Math.max(...scaled);
+        var expScaled = scaled.map(s => Math.exp(s - maxScaled));
+        var sumExp = expScaled.reduce((a, b) => a + b, 0);
+        normalized = expScaled.map(e => e / sumExp);
+    }
+    
+    var r = Math.random();
+    var cumulative = 0;
+    for (var i = 0; i < normalized.length; i++) {
+        cumulative += normalized[i];
+        if (r < cumulative) return candidates[i];
+    }
+    return candidates[candidates.length - 1];
+}
+
+// ============================================
+// Model Loading
+// ============================================
+
+async function loadModel() {
+    try {
+        modelStatusEl.innerHTML = '<span class="loading">⏳</span> Loading transformers.js...';
+        progressFill.style.width = '10%';
+        
+        var transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2');
+        
+        modelStatusEl.innerHTML = '<span class="loading">⏳</span> Loading tokenizer...';
+        progressFill.style.width = '20%';
+        
+        tokenizer = await transformers.AutoTokenizer.from_pretrained(MODEL_ID);
+        
+        modelStatusEl.innerHTML = '<span class="loading">⏳</span> Loading model (~300MB)...';
+        progressFill.style.width = '30%';
+        
+        model = await transformers.AutoModelForCausalLM.from_pretrained(MODEL_ID, {
+            dtype: 'q4',
+            progress_callback: function(progress) {
+                if (progress.status === 'progress') {
+                    progressFill.style.width = Math.round(30 + progress.progress * 70) + '%';
+                }
+            }
+        });
+        
+        modelStatusEl.textContent = '✅ Model ready! Parse a template to begin.';
+        modelStatusEl.className = 'status-bar status-ready';
+        progressBar.classList.add('hidden');
+        parseBtn.disabled = false;
+        
+        log('Model loaded successfully');
+        
+    } catch (error) {
+        log('Model error: ' + error.message);
+        modelStatusEl.textContent = '❌ ' + error.message;
+        modelStatusEl.className = 'status-bar status-error';
+        progressBar.classList.add('hidden');
+    }
+}
+
+// ============================================
+// Greedy Word Completion
+// ============================================
+
+async function greedyCompleteToWord(promptText, initialTokenId, initialProb) {
+    // Start with the initial token
+    var word = tokenizer.decode([initialTokenId]);
+    var currentPrompt = promptText + word;
+    
+    // Keep generating until we hit a space or punctuation
+    var maxIterations = 10;
+    var iteration = 0;
+    
+    while (iteration < maxIterations) {
+        // Check if the last character is a word boundary
+        var lastChar = word.slice(-1);
+        if (/[\s.,!?;:'")\]}>]/.test(lastChar) || word.endsWith('\n')) {
+            // Remove trailing space/punctuation for clean word
+            word = word.replace(/[\s.,!?;:'")\]}>]+$/, '');
+            break;
+        }
+        
+        // Generate next token with temperature 0 (greedy)
+        var inputs = tokenizer(currentPrompt, { return_tensors: 'pt' });
+        var output = await model.forward(inputs);
+        
+        var logitsData = output.logits.data;
+        var vocabSize = output.logits.dims[2];
+        var seqLen = inputs.input_ids.data.length;
+        var lastLogits = logitsData.slice((seqLen - 1) * vocabSize, seqLen * vocabSize);
+        
+        // Find argmax (greedy)
+        var maxIdx = 0;
+        var maxVal = lastLogits[0];
+        for (var i = 1; i < lastLogits.length; i++) {
+            if (lastLogits[i] > maxVal) {
+                maxVal = lastLogits[i];
+                maxIdx = i;
+            }
+        }
+        
+        var nextToken = tokenizer.decode([maxIdx]);
+        
+        // Check if next token starts with space or is punctuation
+        if (/^[\s.,!?;:'")\]}>]/.test(nextToken)) {
+            break;
+        }
+        
+        word += nextToken;
+        currentPrompt += nextToken;
+        iteration++;
+    }
+    
+    // Clean up the word
+    word = word.trim().replace(/^[.,!?;:'"()\[\]{}<>]+/, '').replace(/[.,!?;:'"()\[\]{}<>]+$/, '');
+    
+    return {
+        word: word,
+        probability: initialProb
+    };
+}
+
+async function getWordCandidates(promptText, k) {
+    var inputs = tokenizer(promptText, { return_tensors: 'pt' });
+    var output = await model.forward(inputs);
+    
+    var logitsData = output.logits.data;
+    var vocabSize = output.logits.dims[2];
+    var seqLen = inputs.input_ids.data.length;
+    var lastLogits = logitsData.slice((seqLen - 1) * vocabSize, seqLen * vocabSize);
+    
+    var probs = softmaxWithTemperature(lastLogits, temperature);
+    var topTokens = getTopKTokens(probs, k * 2); // Get more to account for duplicates after completion
+    
+    // Greedy-complete each token to a full word
+    var wordCandidates = [];
+    var seenWords = new Set();
+    
+    for (var i = 0; i < topTokens.length && wordCandidates.length < k; i++) {
+        var token = topTokens[i];
+        var completed = await greedyCompleteToWord(promptText, token.tokenId, token.probability);
+        
+        var normalizedWord = completed.word.toLowerCase().trim();
+        if (normalizedWord && !seenWords.has(normalizedWord)) {
+            seenWords.add(normalizedWord);
+            wordCandidates.push({
+                word: completed.word,
+                probability: completed.probability,
+                rank: wordCandidates.length + 1
+            });
+        }
+    }
+    
+    return wordCandidates;
+}
+
+// ============================================
+// Template Parsing
+// ============================================
+
+function parseTemplate() {
+    templateText = templateInput.value;
+    slots = [];
+    
+    // Find all [SlotName] patterns
+    var regex = /\[([^\]]+)\]/g;
+    var match;
+    var index = 0;
+    
+    while ((match = regex.exec(templateText)) !== null) {
+        slots.push({
+            name: match[1],
+            index: index,
+            startPos: match.index,
+            endPos: match.index + match[0].length,
+            word: null,
+            probability: null,
+            candidates: []
+        });
+        index++;
+    }
+    
+    if (slots.length === 0) {
+        log('No slots found in template');
+        modelStatusEl.textContent = '⚠️ No [slots] found. Use [SlotName] format.';
+        modelStatusEl.className = 'status-bar status-error';
+        return;
+    }
+    
+    log('Parsed ' + slots.length + ' slots: ' + slots.map(s => s.name).join(', '));
+    
+    // Set first slot as active
+    activeSlotIndex = 0;
+    
+    renderSentence();
+    updateButtonStates();
+    
+    modelStatusEl.textContent = '✅ Template parsed! Click on a slot to explore.';
+    modelStatusEl.className = 'status-bar status-ready';
+}
+
+// ============================================
+// Sentence Rendering
+// ============================================
+
+function renderSentence() {
+    var html = '';
+    var lastEnd = 0;
+    
+    slots.forEach(function(slot, idx) {
+        // Add text before this slot
+        if (slot.startPos > lastEnd) {
+            html += '<span class="text-segment">' + escapeHtml(templateText.substring(lastEnd, slot.startPos)) + '</span>';
+        }
+        
+        // Add the slot
+        var slotClass = 'slot';
+        if (slot.word) {
+            slotClass += ' filled';
+        } else {
+            slotClass += ' empty';
+        }
+        if (idx === activeSlotIndex) {
+            slotClass += ' active';
+        }
+        if (idx > activeSlotIndex && !slots[activeSlotIndex].word) {
+            slotClass += ' locked';
+        }
+        
+        var slotContent = slot.word || '[' + slot.name + ']';
+        var probBadge = '';
+        if (slot.probability !== null) {
+            probBadge = '<span class="slot-prob">' + (slot.probability * 100).toFixed(1) + '%</span>';
+        }
+        
+        html += '<span class="' + slotClass + '" data-slot-index="' + idx + '">' + 
+                escapeHtml(slotContent) + probBadge + '</span>';
+        
+        lastEnd = slot.endPos;
+    });
+    
+    // Add remaining text
+    if (lastEnd < templateText.length) {
+        html += '<span class="text-segment">' + escapeHtml(templateText.substring(lastEnd)) + '</span>';
+    }
+    
+    sentenceDisplay.innerHTML = html;
+    
+    // Add click handlers to slots
+    sentenceDisplay.querySelectorAll('.slot').forEach(function(el) {
+        el.addEventListener('click', function() {
+            var idx = parseInt(this.getAttribute('data-slot-index'));
+            selectSlot(idx);
+        });
+    });
+    
+    updatePathScore();
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function selectSlot(index) {
+    if (index > 0 && !slots[index - 1].word) {
+        log('Cannot select slot ' + index + ' - previous slot not filled');
+        return;
+    }
+    
+    activeSlotIndex = index;
+    renderSentence();
+    updateButtonStates();
+    candidatesPanel.classList.remove('visible');
+    
+    log('Selected slot: ' + slots[index].name);
+}
+
+function updateButtonStates() {
+    var hasActiveSlot = activeSlotIndex >= 0 && activeSlotIndex < slots.length;
+    var modelReady = model && tokenizer;
+    
+    getProbsBtn.disabled = !modelReady || !hasActiveSlot;
+    sampleSlotBtn.disabled = !modelReady || !hasActiveSlot || slots[activeSlotIndex].candidates.length === 0;
+    refreshBtn.disabled = !modelReady || activeSlotIndex < 0;
+    slotSampleBtn.disabled = !modelReady || !hasActiveSlot;
+    seqSampleBtn.disabled = !modelReady || slots.length === 0;
+}
+
+function updatePathScore() {
+    var filledSlots = slots.filter(s => s.probability !== null);
+    if (filledSlots.length === 0) {
+        pathScoreDisplay.style.display = 'none';
+        return;
+    }
+    
+    var pathScore = filledSlots.reduce((prod, s) => prod * s.probability, 1);
+    pathScoreValue.textContent = pathScore.toExponential(3);
+    pathScoreDisplay.style.display = 'flex';
+}
+
+// ============================================
+// Build Context for Slot
+// ============================================
+
+function buildContextForSlot(slotIndex) {
+    // Build the prompt up to (but not including) the target slot
+    var context = '';
+    var lastEnd = 0;
+    
+    for (var i = 0; i <= slotIndex; i++) {
+        var slot = slots[i];
+        
+        // Add text before this slot
+        context += templateText.substring(lastEnd, slot.startPos);
+        
+        if (i < slotIndex) {
+            // Add the filled word for previous slots
+            context += slot.word || '';
+        }
+        // For the target slot, we stop here (the model will complete it)
+        
+        lastEnd = slot.endPos;
+    }
+    
+    // Clean up the context
+    context = context.trim();
+    
+    // Add a space at the end if the context doesn't end with one
+    if (context && !/\s$/.test(context)) {
+        context += ' ';
+    }
+    
+    return context;
+}
+
+function buildFullSentence() {
+    var sentence = '';
+    var lastEnd = 0;
+    
+    slots.forEach(function(slot) {
+        sentence += templateText.substring(lastEnd, slot.startPos);
+        sentence += slot.word || '[' + slot.name + ']';
+        lastEnd = slot.endPos;
+    });
+    
+    sentence += templateText.substring(lastEnd);
+    return sentence;
+}
+
+// ============================================
+// Get Probabilities for Active Slot
+// ============================================
+
+var queryCounter = 0;
+
+async function getProbabilities() {
+    if (activeSlotIndex < 0 || activeSlotIndex >= slots.length) return;
+    
+    var slot = slots[activeSlotIndex];
+    var context = buildContextForSlot(activeSlotIndex);
+    
+    log('Getting probabilities for [' + slot.name + ']');
+    log('Context: "' + context + '"');
+    
+    getProbsBtn.disabled = true;
+    getProbsBtn.textContent = '⏳ Computing...';
+    
+    try {
+        var candidates = await getWordCandidates(context, topK);
+        slot.candidates = candidates;
+        
+        log('Got ' + candidates.length + ' candidates');
+        
+        // Display candidates
+        displayCandidates(slot, candidates, context);
+        
+        // Send to CODAP
+        await sendDistributionToCODAP(slot, candidates, context);
+        
+        updateButtonStates();
+        
+    } catch (error) {
+        log('Error: ' + error.message);
+    }
+    
+    getProbsBtn.disabled = false;
+    getProbsBtn.textContent = '📊 Get Probabilities';
+}
+
+function displayCandidates(slot, candidates, context) {
+    candidatesTitle.textContent = 'Candidates for [' + slot.name + ']';
+    candidatesList.innerHTML = '';
+    
+    var maxProb = candidates.length > 0 ? candidates[0].probability : 1;
+    
+    candidates.forEach(function(candidate, idx) {
+        var item = document.createElement('div');
+        item.className = 'candidate-item slide-in';
+        item.style.animationDelay = (idx * 0.05) + 's';
+        
+        var barWidth = (candidate.probability / maxProb) * 100;
+        
+        item.innerHTML = 
+            '<span class="candidate-rank">#' + (idx + 1) + '</span>' +
+            '<span class="candidate-word">' + escapeHtml(candidate.word) + '</span>' +
+            '<div class="candidate-bar-container"><div class="candidate-bar" style="width: ' + barWidth + '%"></div></div>' +
+            '<span class="candidate-prob">' + (candidate.probability * 100).toFixed(1) + '%</span>';
+        
+        item.addEventListener('click', function() {
+            selectCandidate(candidate);
+        });
+        
+        candidatesList.appendChild(item);
+    });
+    
+    candidatesPanel.classList.add('visible');
+}
+
+function selectCandidate(candidate) {
+    var slot = slots[activeSlotIndex];
+    slot.word = candidate.word;
+    slot.probability = candidate.probability;
+    
+    log('Selected "' + candidate.word + '" for [' + slot.name + ']');
+    
+    // Clear downstream slots
+    for (var i = activeSlotIndex + 1; i < slots.length; i++) {
+        slots[i].word = null;
+        slots[i].probability = null;
+        slots[i].candidates = [];
+    }
+    
+    // Move to next slot if available
+    if (activeSlotIndex < slots.length - 1) {
+        activeSlotIndex++;
+    }
+    
+    renderSentence();
+    candidatesPanel.classList.remove('visible');
+    updateButtonStates();
+    
+    // Send the completed sentence if all slots are filled
+    if (slots.every(s => s.word !== null)) {
+        sendCompletedSentenceToCODAP('Manual');
+    }
+}
+
+// ============================================
+// Sampling Functions
+// ============================================
+
+async function sampleSlot() {
+    if (activeSlotIndex < 0) return;
+    
+    var slot = slots[activeSlotIndex];
+    
+    if (slot.candidates.length === 0) {
+        await getProbabilities();
+    }
+    
+    if (slot.candidates.length === 0) {
+        log('No candidates available');
+        return;
+    }
+    
+    var sampled = sampleFromTopK(slot.candidates, temperature);
+    selectCandidate(sampled);
+}
+
+async function runSlotSampling() {
+    if (activeSlotIndex < 0) return;
+    
+    var n = parseInt(slotSampleN.value) || 20;
+    var slot = slots[activeSlotIndex];
+    var context = buildContextForSlot(activeSlotIndex);
+    
+    log('Running ' + n + ' slot-level samples for [' + slot.name + ']');
+    
+    slotSampleBtn.disabled = true;
+    slotSampleBtn.textContent = '⏳ Sampling...';
+    
+    try {
+        // Get fresh candidates
+        var candidates = await getWordCandidates(context, topK);
+        slot.candidates = candidates;
+        
+        // Sample n times
+        var samples = [];
+        for (var i = 0; i < n; i++) {
+            var sampled = sampleFromTopK(candidates, temperature);
+            samples.push(sampled);
+        }
+        
+        // Send samples to CODAP as individual runs
+        for (var i = 0; i < samples.length; i++) {
+            runCounter++;
+            var sample = samples[i];
+            
+            // Create a temporary full sentence with this sample
+            var tempWord = slot.word;
+            var tempProb = slot.probability;
+            slot.word = sample.word;
+            slot.probability = sample.probability;
+            
+            var sentence = buildFullSentence();
+            
+            slot.word = tempWord;
+            slot.probability = tempProb;
+            
+            await codapInterface.sendRequest({
+                action: 'create',
+                resource: 'dataContext[' + DATA_CONTEXT_NAME + '].item',
+                values: [{
+                    Run_ID: 'Run_' + runCounter,
+                    Full_Sentence: sentence,
+                    Path_Score: sample.probability,
+                    Temperature: temperature,
+                    Sample_Type: 'Slot-Sample',
+                    Slot_Name: slot.name,
+                    Slot_Index: slot.index + 1,
+                    Word_Chosen: sample.word,
+                    Word_Probability: sample.probability,
+                    Word_Percentage: sample.probability * 100
+                }]
+            });
+        }
+        
+        log('Sent ' + n + ' slot samples to CODAP');
+        
+    } catch (error) {
+        log('Slot sampling error: ' + error.message);
+    }
+    
+    slotSampleBtn.disabled = false;
+    slotSampleBtn.textContent = 'Run N Samples';
+    updateButtonStates();
+}
+
+async function runSequenceSampling() {
+    var n = parseInt(seqSampleN.value) || 10;
+    
+    log('Running ' + n + ' sequence-level samples');
+    
+    seqSampleBtn.disabled = true;
+    seqSampleBtn.textContent = '⏳ Generating...';
+    
+    try {
+        for (var run = 0; run < n; run++) {
+            runCounter++;
+            
+            // Reset all slots
+            slots.forEach(function(slot) {
+                slot.word = null;
+                slot.probability = null;
+                slot.candidates = [];
+            });
+            
+            // Fill each slot sequentially
+            var slotData = [];
+            
+            for (var i = 0; i < slots.length; i++) {
+                var slot = slots[i];
+                var context = buildContextForSlot(i);
+                
+                var candidates = await getWordCandidates(context, topK);
+                var sampled = sampleFromTopK(candidates, temperature);
+                
+                slot.word = sampled.word;
+                slot.probability = sampled.probability;
+                
+                slotData.push({
+                    Slot_Name: slot.name,
+                    Slot_Index: i + 1,
+                    Word_Chosen: sampled.word,
+                    Word_Probability: sampled.probability,
+                    Word_Percentage: sampled.probability * 100
+                });
+            }
+            
+            var fullSentence = buildFullSentence();
+            var pathScore = slots.reduce((prod, s) => prod * s.probability, 1);
+            
+            // Send parent case first
+            var parentResult = await codapInterface.sendRequest({
+                action: 'create',
+                resource: 'dataContext[' + DATA_CONTEXT_NAME + '].collection[Sentences].case',
+                values: [{
+                    values: {
+                        Run_ID: 'Run_' + runCounter,
+                        Full_Sentence: fullSentence,
+                        Path_Score: pathScore,
+                        Temperature: temperature,
+                        Sample_Type: 'Sequence-Sample'
+                    }
+                }]
+            });
+            
+            // Get parent case ID
+            var parentId = null;
+            if (parentResult && parentResult.success && parentResult.values && parentResult.values[0]) {
+                parentId = parentResult.values[0].id;
+            }
+            
+            // Send child cases
+            if (parentId) {
+                for (var j = 0; j < slotData.length; j++) {
+                    await codapInterface.sendRequest({
+                        action: 'create',
+                        resource: 'dataContext[' + DATA_CONTEXT_NAME + '].collection[Slots].case',
+                        values: [{
+                            parent: parentId,
+                            values: slotData[j]
+                        }]
+                    });
+                }
+            }
+            
+            log('Generated run ' + (run + 1) + '/' + n + ': ' + fullSentence);
+            
+            // Update progress
+            seqSampleBtn.textContent = '⏳ ' + (run + 1) + '/' + n;
+        }
+        
+        // Reset and render
+        slots.forEach(function(slot) {
+            slot.word = null;
+            slot.probability = null;
+            slot.candidates = [];
+        });
+        activeSlotIndex = 0;
+        renderSentence();
+        
+        log('Sequence sampling complete!');
+        
+    } catch (error) {
+        log('Sequence sampling error: ' + error.message);
+    }
+    
+    seqSampleBtn.disabled = false;
+    seqSampleBtn.textContent = 'Generate N Sentences';
+    updateButtonStates();
+}
+
+// ============================================
+// CODAP Data Sending
+// ============================================
+
+async function sendDistributionToCODAP(slot, candidates, context) {
+    if (!codapConnected) return;
+    
+    queryCounter++;
+    
+    var items = candidates.map(function(c, idx) {
+        return {
+            Query_ID: 'Q' + queryCounter,
+            Slot_Name: slot.name,
+            Context: context.substring(Math.max(0, context.length - 50)),
+            Rank: idx + 1,
+            Word: c.word,
+            Probability: c.probability,
+            Percentage: c.probability * 100,
+            Temperature: temperature
+        };
+    });
+    
+    await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext[SlotDistributions].item',
+        values: items
+    });
+    
+    log('Sent distribution Q' + queryCounter + ' to CODAP');
+}
+
+async function sendCompletedSentenceToCODAP(sampleType) {
+    if (!codapConnected) return;
+    
+    runCounter++;
+    
+    var fullSentence = buildFullSentence();
+    var pathScore = slots.reduce((prod, s) => prod * (s.probability || 1), 1);
+    
+    // Create parent case
+    var parentResult = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext[' + DATA_CONTEXT_NAME + '].collection[Sentences].case',
+        values: [{
+            values: {
+                Run_ID: 'Run_' + runCounter,
+                Full_Sentence: fullSentence,
+                Path_Score: pathScore,
+                Temperature: temperature,
+                Sample_Type: sampleType
+            }
+        }]
+    });
+    
+    var parentId = null;
+    if (parentResult && parentResult.success && parentResult.values && parentResult.values[0]) {
+        parentId = parentResult.values[0].id;
+    }
+    
+    // Create child cases
+    if (parentId) {
+        for (var i = 0; i < slots.length; i++) {
+            var slot = slots[i];
+            await codapInterface.sendRequest({
+                action: 'create',
+                resource: 'dataContext[' + DATA_CONTEXT_NAME + '].collection[Slots].case',
+                values: [{
+                    parent: parentId,
+                    values: {
+                        Slot_Name: slot.name,
+                        Slot_Index: i + 1,
+                        Word_Chosen: slot.word,
+                        Word_Probability: slot.probability,
+                        Word_Percentage: (slot.probability || 0) * 100
+                    }
+                }]
+            });
+        }
+    }
+    
+    log('Sent completed sentence Run_' + runCounter + ' to CODAP');
+}
+
+// ============================================
+// Refresh Downstream Slots
+// ============================================
+
+function refreshDownstream() {
+    for (var i = activeSlotIndex; i < slots.length; i++) {
+        slots[i].word = null;
+        slots[i].probability = null;
+        slots[i].candidates = [];
+    }
+    
+    renderSentence();
+    candidatesPanel.classList.remove('visible');
+    updateButtonStates();
+    
+    log('Refreshed slots from [' + slots[activeSlotIndex].name + '] onward');
+}
+
+// ============================================
+// Reset
+// ============================================
+
+function resetAll() {
+    slots.forEach(function(slot) {
+        slot.word = null;
+        slot.probability = null;
+        slot.candidates = [];
+    });
+    
+    activeSlotIndex = slots.length > 0 ? 0 : -1;
+    
+    renderSentence();
+    candidatesPanel.classList.remove('visible');
+    updateButtonStates();
+    
+    log('Reset all slots');
+}
+
+// ============================================
+// Initialization
+// ============================================
+
+async function initCODAP() {
+    log('Initializing CODAP connection...');
+    
+    var result = await codapInterface.init({
+        name: 'StatisticalMadLibs',
+        title: 'Statistical Mad Libs',
+        version: '2.0',
+        dimensions: { width: 450, height: 750 }
+    });
+    
+    if (result && result.success) {
+        codapConnected = true;
+        codapDot.classList.add('connected');
+        codapStatus.textContent = 'Connected to CODAP';
+        await createDataContext();
+    } else {
+        log('Not connected - standalone mode');
+        codapStatus.textContent = 'Standalone mode';
+    }
+    
+    loadModel();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    log('DOM ready');
+    initDOMRefs();
+    
+    // Event listeners
+    parseBtn.addEventListener('click', parseTemplate);
+    getProbsBtn.addEventListener('click', getProbabilities);
+    sampleSlotBtn.addEventListener('click', sampleSlot);
+    refreshBtn.addEventListener('click', refreshDownstream);
+    resetBtn.addEventListener('click', resetAll);
+    closeCandidates.addEventListener('click', function() {
+        candidatesPanel.classList.remove('visible');
+    });
+    slotSampleBtn.addEventListener('click', runSlotSampling);
+    seqSampleBtn.addEventListener('click', runSequenceSampling);
+    
+    // Slider listeners
+    tempSlider.addEventListener('input', function() {
+        temperature = parseFloat(this.value);
+        tempValue.textContent = temperature.toFixed(2);
+        
+        // Update CODAP global if connected
+        if (codapConnected) {
+            codapInterface.sendRequest({
+                action: 'update',
+                resource: 'global[Temperature]',
+                values: { value: temperature }
+            });
+        }
+    });
+    
+    topKSlider.addEventListener('input', function() {
+        topK = parseInt(this.value);
+        topKValue.textContent = topK;
+        
+        if (codapConnected) {
+            codapInterface.sendRequest({
+                action: 'update',
+                resource: 'global[TopK]',
+                values: { value: topK }
+            });
+        }
+    });
+    
+    // Initialize
+    setTimeout(initCODAP, 100);
+});
+</script>
+</body>
+</html>
