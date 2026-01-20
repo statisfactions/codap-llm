@@ -819,7 +819,8 @@
         
         <div class="prompt-section">
             <label class="prompt-label">System Prefix (prepended to context):</label>
-            <textarea class="prompt-textarea" id="systemPrefix" rows="2">Complete this sentence with a single word:</textarea>
+            <textarea class="prompt-textarea" id="systemPrefix" rows="2">Fill in [SLOT] with one word.</textarea>
+            <div class="template-hint">Use [SLOT] to insert the current slot name (e.g., [Animal], [Object])</div>
         </div>
         
         <div class="prompt-section">
@@ -1584,10 +1585,15 @@ function buildContextForSlot(slotIndex) {
 
 function buildFullPrompt(slotIndex) {
     var context = buildContextForSlot(slotIndex);
-    var prefix = systemPrefix ? systemPrefix.value : '';
-    var suffix = contextSuffix ? contextSuffix.value : '';
+    var slot = slots[slotIndex];
+    var prefixTemplate = systemPrefix ? systemPrefix.value : '';
+    var suffixTemplate = contextSuffix ? contextSuffix.value : '';
     var addSpace = addSpaceBeforeSlot ? addSpaceBeforeSlot.checked : true;
     var useChatFormat = useChat ? useChat.checked : true;
+    
+    // Replace [SLOT] placeholder with actual slot name
+    var prefix = prefixTemplate.replace(/\[SLOT\]/gi, '[' + slot.name + ']');
+    var suffix = suffixTemplate.replace(/\[SLOT\]/gi, '[' + slot.name + ']');
     
     var fullPrompt;
     
@@ -1626,7 +1632,9 @@ function buildFullPrompt(slotIndex) {
         fullPrompt: fullPrompt,
         context: context,
         prefix: prefix,
-        suffix: suffix
+        prefixTemplate: prefixTemplate,
+        suffix: suffix,
+        suffixTemplate: suffixTemplate
     };
 }
 
@@ -1648,6 +1656,7 @@ function updatePromptPreview() {
     }
     
     if (parts.prefix) {
+        // Show the resolved prefix (with actual slot name)
         html += '<span class="highlight-prefix">' + escapeHtml(parts.prefix) + '</span>\n\n';
     }
     
@@ -1657,7 +1666,7 @@ function updatePromptPreview() {
         html += '<span class="highlight-suffix">' + escapeHtml(parts.suffix) + '</span>';
     }
     
-    html += '<span class="highlight-slot">[' + slot.name + ' → ?]</span>';
+    html += '<span class="highlight-slot">[→ ' + slot.name + '?]</span>';
     
     if (useChat && useChat.checked) {
         html += '\n<span style="color:#569cd6">&lt;|im_end|&gt;\n&lt;|im_start|&gt;assistant</span>\n';
@@ -2179,19 +2188,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Prompt engineering listeners
     var PROMPT_PRESETS = {
         'completion': {
-            prefix: 'Complete this sentence with a single word:',
+            prefix: 'Fill in [SLOT] with one word.',
             suffix: '',
             useChat: true,
             addSpace: true
         },
         'fill-blank': {
-            prefix: 'Fill in the blank with the most appropriate word. Only respond with the single word that fills the blank.',
-            suffix: '\n\nThe word is:',
+            prefix: 'Fill in the blank [SLOT] with the most appropriate single word.',
+            suffix: '\n\nThe [SLOT] is:',
             useChat: true,
-            addSpace: true
+            addSpace: false
         },
         'story': {
-            prefix: 'Continue this story naturally. Respond with only the next word.',
+            prefix: 'Continue this story. The next word should be a [SLOT]. Reply with only that word.',
             suffix: '',
             useChat: true,
             addSpace: true
