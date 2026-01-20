@@ -530,6 +530,145 @@
         
         .hidden { display: none !important; }
         
+        /* Prompt Engineering Section */
+        .prompt-engineering {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+        
+        .prompt-toggle {
+            padding: 12px 14px;
+            background: var(--bg-warm);
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 12px;
+            color: var(--text-muted);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .prompt-toggle::-webkit-details-marker { display: none; }
+        
+        .prompt-toggle::before {
+            content: '▶';
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+        
+        details[open] .prompt-toggle::before {
+            transform: rotate(90deg);
+        }
+        
+        .prompt-section {
+            padding: 12px 14px;
+            border-top: 1px solid var(--border-light);
+        }
+        
+        .prompt-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        
+        .prompt-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        
+        .prompt-label-row .prompt-label {
+            margin-bottom: 0;
+        }
+        
+        .prompt-textarea {
+            width: 100%;
+            padding: 10px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 12px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: var(--bg-cream);
+            resize: vertical;
+            line-height: 1.4;
+        }
+        
+        .prompt-textarea:focus {
+            outline: none;
+            border-color: var(--accent-teal);
+        }
+        
+        .prompt-preview {
+            padding: 10px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 11px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: var(--radius-sm);
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 120px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+        
+        .prompt-preview .highlight-context {
+            color: #9cdcfe;
+        }
+        
+        .prompt-preview .highlight-prefix {
+            color: #ce9178;
+        }
+        
+        .prompt-preview .highlight-suffix {
+            color: #b5cea8;
+        }
+        
+        .prompt-preview .highlight-slot {
+            color: #dcdcaa;
+            background: rgba(220, 220, 170, 0.2);
+            padding: 1px 3px;
+            border-radius: 2px;
+        }
+        
+        .prompt-preview.model-input {
+            background: #0d1117;
+            color: #8b949e;
+            font-size: 10px;
+        }
+        
+        .prompt-options {
+            padding: 10px 14px;
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-dark);
+            cursor: pointer;
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
+        
         /* Animations */
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -661,6 +800,58 @@
         </div>
     </div>
     
+    <!-- Prompt Engineering Section (Collapsible) -->
+    <details class="prompt-engineering" id="promptEngineering">
+        <summary class="prompt-toggle">🔧 Prompt Engineering (click to expand)</summary>
+        
+        <div class="prompt-section">
+            <div class="prompt-label-row">
+                <label class="prompt-label">Prompt Preset:</label>
+                <select id="promptPreset" style="padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border-light);">
+                    <option value="completion">Simple Completion</option>
+                    <option value="fill-blank">Fill in the Blank</option>
+                    <option value="story">Story Continuation</option>
+                    <option value="minimal">Minimal (no prefix)</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="prompt-section">
+            <label class="prompt-label">System Prefix (prepended to context):</label>
+            <textarea class="prompt-textarea" id="systemPrefix" rows="2">Complete this sentence with a single word:</textarea>
+        </div>
+        
+        <div class="prompt-section">
+            <label class="prompt-label">Context Suffix (appended after context, before generation):</label>
+            <textarea class="prompt-textarea" id="contextSuffix" rows="1"></textarea>
+        </div>
+        
+        <div class="prompt-section">
+            <div class="prompt-label-row">
+                <label class="prompt-label">Live Prompt Preview:</label>
+                <button class="btn btn-secondary" id="copyPromptBtn" style="padding: 4px 8px; font-size: 10px;">📋 Copy</button>
+            </div>
+            <div class="prompt-preview" id="promptPreview">Parse a template and select a slot to see the prompt</div>
+        </div>
+        
+        <div class="prompt-section">
+            <label class="prompt-label">Last Model Input (actual tokens sent):</label>
+            <div class="prompt-preview model-input" id="lastModelInput">—</div>
+        </div>
+        
+        <div class="prompt-options">
+            <label class="checkbox-label">
+                <input type="checkbox" id="useChat" checked>
+                Use chat format (recommended for instruct models)
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="addSpaceBeforeSlot" checked>
+                Add space before slot completion
+            </label>
+        </div>
+    </details>
+
     <div class="debug-log" id="debugLog"></div>
 
 <script>
@@ -813,6 +1004,8 @@ var candidatesPanel, candidatesList, candidatesTitle, closeCandidates;
 var slotSampleN, slotSampleBtn, seqSampleN, seqSampleBtn;
 var pathScoreDisplay, pathScoreValue;
 var codapDot, codapStatus;
+var systemPrefix, contextSuffix, promptPreview, lastModelInput;
+var useChat, addSpaceBeforeSlot, copyPromptBtn, promptPreset;
 
 function initDOMRefs() {
     modelStatusEl = document.getElementById('modelStatus');
@@ -841,6 +1034,14 @@ function initDOMRefs() {
     pathScoreValue = document.getElementById('pathScoreValue');
     codapDot = document.getElementById('codapDot');
     codapStatus = document.getElementById('codapStatus');
+    systemPrefix = document.getElementById('systemPrefix');
+    contextSuffix = document.getElementById('contextSuffix');
+    promptPreview = document.getElementById('promptPreview');
+    lastModelInput = document.getElementById('lastModelInput');
+    useChat = document.getElementById('useChat');
+    addSpaceBeforeSlot = document.getElementById('addSpaceBeforeSlot');
+    copyPromptBtn = document.getElementById('copyPromptBtn');
+    promptPreset = document.getElementById('promptPreset');
 }
 
 // ============================================
@@ -1092,6 +1293,11 @@ async function greedyCompleteToWord(promptText, initialTokenId, initialProb) {
     var word = tokenizer.decode([initialTokenId]);
     var currentPrompt = promptText + word;
     
+    // Skip if initial token is a special token or empty
+    if (word.includes('<|') || word.includes('|>') || !word.trim()) {
+        return { word: '', probability: initialProb };
+    }
+    
     // Keep generating until we hit a space or punctuation
     var maxIterations = 10;
     var iteration = 0;
@@ -1126,6 +1332,11 @@ async function greedyCompleteToWord(promptText, initialTokenId, initialProb) {
         
         var nextToken = tokenizer.decode([maxIdx]);
         
+        // Stop on special tokens
+        if (nextToken.includes('<|') || nextToken.includes('|>')) {
+            break;
+        }
+        
         // Check if next token starts with space or is punctuation
         if (/^[\s.,!?;:'")\]}>]/.test(nextToken)) {
             break;
@@ -1136,8 +1347,11 @@ async function greedyCompleteToWord(promptText, initialTokenId, initialProb) {
         iteration++;
     }
     
-    // Clean up the word
-    word = word.trim().replace(/^[.,!?;:'"()\[\]{}<>]+/, '').replace(/[.,!?;:'"()\[\]{}<>]+$/, '');
+    // Clean up the word - remove special characters but keep the core word
+    word = word.trim()
+        .replace(/^[.,!?;:'"()\[\]{}<>]+/, '')
+        .replace(/[.,!?;:'"()\[\]{}<>]+$/, '')
+        .replace(/<\|.*?\|>/g, ''); // Remove any special tokens
     
     return {
         word: word,
@@ -1145,8 +1359,19 @@ async function greedyCompleteToWord(promptText, initialTokenId, initialProb) {
     };
 }
 
-async function getWordCandidates(promptText, k) {
-    var inputs = tokenizer(promptText, { return_tensors: 'pt' });
+async function getWordCandidates(promptText, k, slotIndex) {
+    // Build the full prompt with prefix/suffix
+    var promptData = buildFullPrompt(slotIndex !== undefined ? slotIndex : activeSlotIndex);
+    var fullPrompt = promptData.fullPrompt;
+    
+    // Update the last model input display
+    if (lastModelInput) {
+        lastModelInput.textContent = fullPrompt;
+    }
+    
+    log('Prompt length: ' + fullPrompt.length + ' chars');
+    
+    var inputs = tokenizer(fullPrompt, { return_tensors: 'pt' });
     var output = await model.forward(inputs);
     
     var logitsData = output.logits.data;
@@ -1155,7 +1380,7 @@ async function getWordCandidates(promptText, k) {
     var lastLogits = logitsData.slice((seqLen - 1) * vocabSize, seqLen * vocabSize);
     
     var probs = softmaxWithTemperature(lastLogits, temperature);
-    var topTokens = getTopKTokens(probs, k * 2); // Get more to account for duplicates after completion
+    var topTokens = getTopKTokens(probs, k * 3); // Get more to account for duplicates after completion
     
     // Greedy-complete each token to a full word
     var wordCandidates = [];
@@ -1163,10 +1388,10 @@ async function getWordCandidates(promptText, k) {
     
     for (var i = 0; i < topTokens.length && wordCandidates.length < k; i++) {
         var token = topTokens[i];
-        var completed = await greedyCompleteToWord(promptText, token.tokenId, token.probability);
+        var completed = await greedyCompleteToWord(fullPrompt, token.tokenId, token.probability);
         
         var normalizedWord = completed.word.toLowerCase().trim();
-        if (normalizedWord && !seenWords.has(normalizedWord)) {
+        if (normalizedWord && normalizedWord.length > 0 && !seenWords.has(normalizedWord)) {
             seenWords.add(normalizedWord);
             wordCandidates.push({
                 word: completed.word,
@@ -1219,6 +1444,7 @@ function parseTemplate() {
     
     renderSentence();
     updateButtonStates();
+    updatePromptPreview();
     
     modelStatusEl.textContent = '✅ Template parsed! Click on a slot to explore.';
     modelStatusEl.className = 'status-bar status-ready';
@@ -1297,6 +1523,7 @@ function selectSlot(index) {
     activeSlotIndex = index;
     renderSentence();
     updateButtonStates();
+    updatePromptPreview();
     candidatesPanel.classList.remove('visible');
     
     log('Selected slot: ' + slots[index].name);
@@ -1352,12 +1579,91 @@ function buildContextForSlot(slotIndex) {
     // Clean up the context
     context = context.trim();
     
-    // Add a space at the end if the context doesn't end with one
-    if (context && !/\s$/.test(context)) {
-        context += ' ';
+    return context;
+}
+
+function buildFullPrompt(slotIndex) {
+    var context = buildContextForSlot(slotIndex);
+    var prefix = systemPrefix ? systemPrefix.value : '';
+    var suffix = contextSuffix ? contextSuffix.value : '';
+    var addSpace = addSpaceBeforeSlot ? addSpaceBeforeSlot.checked : true;
+    var useChatFormat = useChat ? useChat.checked : true;
+    
+    var fullPrompt;
+    
+    if (useChatFormat) {
+        // Build as a chat-style prompt
+        var userMessage = '';
+        if (prefix) {
+            userMessage = prefix + '\n\n';
+        }
+        userMessage += context;
+        if (suffix) {
+            userMessage += suffix;
+        }
+        if (addSpace && !userMessage.endsWith(' ')) {
+            userMessage += ' ';
+        }
+        
+        // For instruct models, we simulate chat format
+        fullPrompt = '<|im_start|>user\n' + userMessage + '<|im_end|>\n<|im_start|>assistant\n';
+    } else {
+        // Plain completion mode
+        fullPrompt = '';
+        if (prefix) {
+            fullPrompt = prefix + '\n\n';
+        }
+        fullPrompt += context;
+        if (suffix) {
+            fullPrompt += suffix;
+        }
+        if (addSpace && !fullPrompt.endsWith(' ')) {
+            fullPrompt += ' ';
+        }
     }
     
-    return context;
+    return {
+        fullPrompt: fullPrompt,
+        context: context,
+        prefix: prefix,
+        suffix: suffix
+    };
+}
+
+function updatePromptPreview() {
+    if (!promptPreview) return;
+    if (activeSlotIndex < 0 || activeSlotIndex >= slots.length) {
+        promptPreview.innerHTML = 'Parse a template and select a slot to see the prompt';
+        return;
+    }
+    
+    var parts = buildFullPrompt(activeSlotIndex);
+    var slot = slots[activeSlotIndex];
+    
+    // Build highlighted preview
+    var html = '';
+    
+    if (useChat && useChat.checked) {
+        html += '<span style="color:#569cd6">&lt;|im_start|&gt;user</span>\n';
+    }
+    
+    if (parts.prefix) {
+        html += '<span class="highlight-prefix">' + escapeHtml(parts.prefix) + '</span>\n\n';
+    }
+    
+    html += '<span class="highlight-context">' + escapeHtml(parts.context) + '</span>';
+    
+    if (parts.suffix) {
+        html += '<span class="highlight-suffix">' + escapeHtml(parts.suffix) + '</span>';
+    }
+    
+    html += '<span class="highlight-slot">[' + slot.name + ' → ?]</span>';
+    
+    if (useChat && useChat.checked) {
+        html += '\n<span style="color:#569cd6">&lt;|im_end|&gt;\n&lt;|im_start|&gt;assistant</span>\n';
+    }
+    
+    promptPreview.innerHTML = html;
 }
 
 function buildFullSentence() {
@@ -1389,14 +1695,23 @@ async function getProbabilities() {
     log('Getting probabilities for [' + slot.name + ']');
     log('Context: "' + context + '"');
     
+    // Update prompt preview
+    updatePromptPreview();
+    
     getProbsBtn.disabled = true;
     getProbsBtn.textContent = '⏳ Computing...';
     
     try {
-        var candidates = await getWordCandidates(context, topK);
+        var candidates = await getWordCandidates(context, topK, activeSlotIndex);
         slot.candidates = candidates;
         
         log('Got ' + candidates.length + ' candidates');
+        
+        if (candidates.length === 0) {
+            log('WARNING: No valid word candidates found!');
+            modelStatusEl.textContent = '⚠️ No candidates - try adjusting the prompt';
+            modelStatusEl.className = 'status-bar status-error';
+        }
         
         // Display candidates
         displayCandidates(slot, candidates, context);
@@ -1408,6 +1723,7 @@ async function getProbabilities() {
         
     } catch (error) {
         log('Error: ' + error.message);
+        console.error(error);
     }
     
     getProbsBtn.disabled = false;
@@ -1508,7 +1824,7 @@ async function runSlotSampling() {
     
     try {
         // Get fresh candidates
-        var candidates = await getWordCandidates(context, topK);
+        var candidates = await getWordCandidates(context, topK, activeSlotIndex);
         slot.candidates = candidates;
         
         // Sample n times
@@ -1589,7 +1905,7 @@ async function runSequenceSampling() {
                 var slot = slots[i];
                 var context = buildContextForSlot(i);
                 
-                var candidates = await getWordCandidates(context, topK);
+                var candidates = await getWordCandidates(context, topK, i);
                 var sampled = sampleFromTopK(candidates, temperature);
                 
                 slot.word = sampled.word;
@@ -1856,6 +2172,75 @@ document.addEventListener('DOMContentLoaded', function() {
                 action: 'update',
                 resource: 'global[TopK]',
                 values: { value: topK }
+            });
+        }
+    });
+    
+    // Prompt engineering listeners
+    var PROMPT_PRESETS = {
+        'completion': {
+            prefix: 'Complete this sentence with a single word:',
+            suffix: '',
+            useChat: true,
+            addSpace: true
+        },
+        'fill-blank': {
+            prefix: 'Fill in the blank with the most appropriate word. Only respond with the single word that fills the blank.',
+            suffix: '\n\nThe word is:',
+            useChat: true,
+            addSpace: true
+        },
+        'story': {
+            prefix: 'Continue this story naturally. Respond with only the next word.',
+            suffix: '',
+            useChat: true,
+            addSpace: true
+        },
+        'minimal': {
+            prefix: '',
+            suffix: '',
+            useChat: false,
+            addSpace: true
+        },
+        'custom': null
+    };
+    
+    promptPreset.addEventListener('change', function() {
+        var preset = PROMPT_PRESETS[this.value];
+        if (preset) {
+            systemPrefix.value = preset.prefix;
+            contextSuffix.value = preset.suffix;
+            useChat.checked = preset.useChat;
+            addSpaceBeforeSlot.checked = preset.addSpace;
+            updatePromptPreview();
+        }
+    });
+    
+    systemPrefix.addEventListener('input', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+    contextSuffix.addEventListener('input', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+    useChat.addEventListener('change', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+    addSpaceBeforeSlot.addEventListener('change', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+    
+    copyPromptBtn.addEventListener('click', function() {
+        if (activeSlotIndex >= 0) {
+            var promptData = buildFullPrompt(activeSlotIndex);
+            navigator.clipboard.writeText(promptData.fullPrompt).then(function() {
+                copyPromptBtn.textContent = '✓ Copied!';
+                setTimeout(function() {
+                    copyPromptBtn.textContent = '📋 Copy';
+                }, 1500);
             });
         }
     });
