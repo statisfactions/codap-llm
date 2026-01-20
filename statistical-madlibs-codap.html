@@ -927,11 +927,19 @@ var codapInterface = (function() {
         sendRequest: function(request) {
             return new Promise(function(resolve) {
                 if (!phone || !connected) {
+                    log('⚠️ CODAP sendRequest failed: Not connected');
                     resolve({ success: false, error: 'Not connected' });
                     return;
                 }
                 
+                log('→ CODAP: ' + request.action + ' ' + request.resource);
+                
                 phone.call(request, function(response) {
+                    if (response && response.success) {
+                        log('← CODAP: ✓ success');
+                    } else {
+                        log('← CODAP: ✗ failed - ' + JSON.stringify(response));
+                    }
                     resolve(response);
                 });
             });
@@ -978,7 +986,7 @@ var tokenizer = null;
 var model = null;
 var codapConnected = false;
 
-var MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
+var MODEL_ID = 'HuggingFaceTB/SmolLM2-135M-Instruct';
 
 // Template state
 var templateText = '';
@@ -1046,72 +1054,55 @@ function initDOMRefs() {
 }
 
 // ============================================
-// CODAP Data Setup - Hierarchical Structure
+// CODAP Data Setup - Flat Structure (simplified)
 // ============================================
 
 var DATA_CONTEXT_NAME = 'MadLibsData';
+var DIST_CONTEXT_NAME = 'SlotDistributions';
 
 async function createDataContext() {
-    log('Creating hierarchical data context...');
+    log('Creating data contexts...');
     
-    // Create data context with parent-child structure
+    // Main data context for completed sentences/samples
     var result = await codapInterface.sendRequest({
         action: 'create',
         resource: 'dataContext',
         values: {
             name: DATA_CONTEXT_NAME,
-            title: 'Mad Libs Data',
-            collections: [
-                {
-                    name: 'Sentences',
-                    title: 'Sentences (Runs)',
-                    attrs: [
-                        { name: 'Run_ID', title: 'Run', type: 'categorical' },
-                        { name: 'Full_Sentence', title: 'Sentence', type: 'categorical' },
-                        { name: 'Path_Score', title: 'Path Score', type: 'numeric', precision: 6 },
-                        { name: 'Temperature', title: 'Temperature', type: 'numeric', precision: 2 },
-                        { name: 'Sample_Type', title: 'Type', type: 'categorical' }
-                    ]
-                },
-                {
-                    name: 'Slots',
-                    title: 'Slots (Choices)',
-                    parent: 'Sentences',
-                    attrs: [
-                        { name: 'Slot_Name', title: 'Slot', type: 'categorical' },
-                        { name: 'Slot_Index', title: 'Position', type: 'numeric' },
-                        { name: 'Word_Chosen', title: 'Word', type: 'categorical' },
-                        { name: 'Word_Probability', title: 'Probability', type: 'numeric', precision: 4 },
-                        { name: 'Word_Percentage', title: 'Percent', type: 'numeric', precision: 2 }
-                    ]
-                }
-            ]
+            title: 'Mad Libs Sentences',
+            collections: [{
+                name: 'Samples',
+                title: 'Samples',
+                attrs: [
+                    { name: 'Run_ID', title: 'Run', type: 'categorical' },
+                    { name: 'Sample_Type', title: 'Type', type: 'categorical' },
+                    { name: 'Template', title: 'Template', type: 'categorical' },
+                    { name: 'Full_Sentence', title: 'Sentence', type: 'categorical' },
+                    { name: 'Slot_Name', title: 'Slot', type: 'categorical' },
+                    { name: 'Word_Chosen', title: 'Word', type: 'categorical' },
+                    { name: 'Word_Probability', title: 'Probability', type: 'numeric', precision: 4 },
+                    { name: 'Path_Score', title: 'Path Score', type: 'numeric', precision: 6 },
+                    { name: 'Temperature', title: 'Temp', type: 'numeric', precision: 2 }
+                ]
+            }]
         }
     });
     
-    log('Data context result: ' + JSON.stringify(result));
+    log('Main data context result: ' + JSON.stringify(result));
     
-    // Create a table
-    await codapInterface.sendRequest({
-        action: 'create',
-        resource: 'component',
-        values: { type: 'caseTable', dataContext: DATA_CONTEXT_NAME }
-    });
-    
-    // Create probability distribution context for bar charts
-    await codapInterface.sendRequest({
+    // Distribution context for probability bar charts
+    var distResult = await codapInterface.sendRequest({
         action: 'create',
         resource: 'dataContext',
         values: {
-            name: 'SlotDistributions',
-            title: 'Slot Probability Distributions',
+            name: DIST_CONTEXT_NAME,
+            title: 'Word Probabilities',
             collections: [{
                 name: 'Candidates',
                 title: 'Candidate Words',
                 attrs: [
                     { name: 'Query_ID', title: 'Query', type: 'categorical' },
                     { name: 'Slot_Name', title: 'Slot', type: 'categorical' },
-                    { name: 'Context', title: 'Context', type: 'categorical' },
                     { name: 'Rank', title: 'Rank', type: 'numeric' },
                     { name: 'Word', title: 'Word', type: 'categorical' },
                     { name: 'Probability', title: 'Probability', type: 'numeric', precision: 4 },
@@ -1122,47 +1113,22 @@ async function createDataContext() {
         }
     });
     
-    // Create CODAP sliders for Temperature and TopK
-    await codapInterface.sendRequest({
-        action: 'create',
-        resource: 'global',
-        values: { name: 'Temperature', value: 1.0 }
-    });
+    log('Distribution context result: ' + JSON.stringify(distResult));
     
-    await codapInterface.sendRequest({
+    // Create tables
+    var tableResult = await codapInterface.sendRequest({
         action: 'create',
         resource: 'component',
-        values: { type: 'slider', globalValueName: 'Temperature', lowerBound: 0.1, upperBound: 2.0 }
+        values: { type: 'caseTable', dataContext: DATA_CONTEXT_NAME }
     });
+    log('Main table result: ' + JSON.stringify(tableResult));
     
-    await codapInterface.sendRequest({
-        action: 'create',
-        resource: 'global',
-        values: { name: 'TopK', value: 10 }
-    });
-    
-    await codapInterface.sendRequest({
+    var distTableResult = await codapInterface.sendRequest({
         action: 'create',
         resource: 'component',
-        values: { type: 'slider', globalValueName: 'TopK', lowerBound: 3, upperBound: 20 }
+        values: { type: 'caseTable', dataContext: DIST_CONTEXT_NAME }
     });
-    
-    // Subscribe to slider changes
-    codapInterface.on('notify', 'global[Temperature]', function(notification) {
-        if (notification && notification.values && typeof notification.values.value === 'number') {
-            temperature = notification.values.value;
-            tempValue.textContent = temperature.toFixed(2);
-            tempSlider.value = temperature;
-        }
-    });
-    
-    codapInterface.on('notify', 'global[TopK]', function(notification) {
-        if (notification && notification.values && typeof notification.values.value === 'number') {
-            topK = Math.round(notification.values.value);
-            topKValue.textContent = topK;
-            topKSlider.value = topK;
-        }
-    });
+    log('Distribution table result: ' + JSON.stringify(distTableResult));
 }
 
 // ============================================
@@ -1844,43 +1810,51 @@ async function runSlotSampling() {
         }
         
         // Send samples to CODAP as individual runs
-        for (var i = 0; i < samples.length; i++) {
-            runCounter++;
-            var sample = samples[i];
+        if (codapConnected) {
+            for (var i = 0; i < samples.length; i++) {
+                runCounter++;
+                var sample = samples[i];
+                
+                // Create a temporary full sentence with this sample
+                var tempWord = slot.word;
+                var tempProb = slot.probability;
+                slot.word = sample.word;
+                slot.probability = sample.probability;
+                
+                var sentence = buildFullSentence();
+                
+                slot.word = tempWord;
+                slot.probability = tempProb;
+                
+                var result = await codapInterface.sendRequest({
+                    action: 'create',
+                    resource: 'dataContext[' + DATA_CONTEXT_NAME + '].item',
+                    values: [{
+                        Run_ID: 'Run_' + runCounter,
+                        Sample_Type: 'Slot-Sample',
+                        Template: templateText,
+                        Full_Sentence: sentence,
+                        Slot_Name: slot.name,
+                        Word_Chosen: sample.word,
+                        Word_Probability: sample.probability,
+                        Path_Score: sample.probability,
+                        Temperature: temperature
+                    }]
+                });
+                
+                if (i === 0) {
+                    log('First sample send result: ' + JSON.stringify(result));
+                }
+            }
             
-            // Create a temporary full sentence with this sample
-            var tempWord = slot.word;
-            var tempProb = slot.probability;
-            slot.word = sample.word;
-            slot.probability = sample.probability;
-            
-            var sentence = buildFullSentence();
-            
-            slot.word = tempWord;
-            slot.probability = tempProb;
-            
-            await codapInterface.sendRequest({
-                action: 'create',
-                resource: 'dataContext[' + DATA_CONTEXT_NAME + '].item',
-                values: [{
-                    Run_ID: 'Run_' + runCounter,
-                    Full_Sentence: sentence,
-                    Path_Score: sample.probability,
-                    Temperature: temperature,
-                    Sample_Type: 'Slot-Sample',
-                    Slot_Name: slot.name,
-                    Slot_Index: slot.index + 1,
-                    Word_Chosen: sample.word,
-                    Word_Probability: sample.probability,
-                    Word_Percentage: sample.probability * 100
-                }]
-            });
+            log('Sent ' + n + ' slot samples to CODAP');
+        } else {
+            log('CODAP not connected - samples not sent');
         }
-        
-        log('Sent ' + n + ' slot samples to CODAP');
         
     } catch (error) {
         log('Slot sampling error: ' + error.message);
+        console.error(error);
     }
     
     slotSampleBtn.disabled = false;
@@ -1908,8 +1882,6 @@ async function runSequenceSampling() {
             });
             
             // Fill each slot sequentially
-            var slotData = [];
-            
             for (var i = 0; i < slots.length; i++) {
                 var slot = slots[i];
                 var context = buildContextForSlot(i);
@@ -1919,51 +1891,35 @@ async function runSequenceSampling() {
                 
                 slot.word = sampled.word;
                 slot.probability = sampled.probability;
-                
-                slotData.push({
-                    Slot_Name: slot.name,
-                    Slot_Index: i + 1,
-                    Word_Chosen: sampled.word,
-                    Word_Probability: sampled.probability,
-                    Word_Percentage: sampled.probability * 100
-                });
             }
             
             var fullSentence = buildFullSentence();
             var pathScore = slots.reduce((prod, s) => prod * s.probability, 1);
             
-            // Send parent case first
-            var parentResult = await codapInterface.sendRequest({
-                action: 'create',
-                resource: 'dataContext[' + DATA_CONTEXT_NAME + '].collection[Sentences].case',
-                values: [{
-                    values: {
+            // Send flat data - one row per slot
+            if (codapConnected) {
+                var items = slots.map(function(slot) {
+                    return {
                         Run_ID: 'Run_' + runCounter,
+                        Sample_Type: 'Sequence-Sample',
+                        Template: templateText,
                         Full_Sentence: fullSentence,
+                        Slot_Name: slot.name,
+                        Word_Chosen: slot.word,
+                        Word_Probability: slot.probability,
                         Path_Score: pathScore,
-                        Temperature: temperature,
-                        Sample_Type: 'Sequence-Sample'
-                    }
-                }]
-            });
-            
-            // Get parent case ID
-            var parentId = null;
-            if (parentResult && parentResult.success && parentResult.values && parentResult.values[0]) {
-                parentId = parentResult.values[0].id;
-            }
-            
-            // Send child cases
-            if (parentId) {
-                for (var j = 0; j < slotData.length; j++) {
-                    await codapInterface.sendRequest({
-                        action: 'create',
-                        resource: 'dataContext[' + DATA_CONTEXT_NAME + '].collection[Slots].case',
-                        values: [{
-                            parent: parentId,
-                            values: slotData[j]
-                        }]
-                    });
+                        Temperature: temperature
+                    };
+                });
+                
+                var result = await codapInterface.sendRequest({
+                    action: 'create',
+                    resource: 'dataContext[' + DATA_CONTEXT_NAME + '].item',
+                    values: items
+                });
+                
+                if (run === 0) {
+                    log('First sequence send result: ' + JSON.stringify(result));
                 }
             }
             
@@ -1986,6 +1942,7 @@ async function runSequenceSampling() {
         
     } catch (error) {
         log('Sequence sampling error: ' + error.message);
+        console.error(error);
     }
     
     seqSampleBtn.disabled = false;
@@ -1998,15 +1955,18 @@ async function runSequenceSampling() {
 // ============================================
 
 async function sendDistributionToCODAP(slot, candidates, context) {
-    if (!codapConnected) return;
+    if (!codapConnected) {
+        log('CODAP not connected - skipping distribution send');
+        return;
+    }
     
     queryCounter++;
+    log('Sending distribution Q' + queryCounter + ' to CODAP (' + candidates.length + ' candidates)');
     
     var items = candidates.map(function(c, idx) {
         return {
             Query_ID: 'Q' + queryCounter,
             Slot_Name: slot.name,
-            Context: context.substring(Math.max(0, context.length - 50)),
             Rank: idx + 1,
             Word: c.word,
             Probability: c.probability,
@@ -2015,65 +1975,54 @@ async function sendDistributionToCODAP(slot, candidates, context) {
         };
     });
     
-    await codapInterface.sendRequest({
+    log('Items to send: ' + JSON.stringify(items.slice(0, 2)) + '...');
+    
+    var result = await codapInterface.sendRequest({
         action: 'create',
-        resource: 'dataContext[SlotDistributions].item',
+        resource: 'dataContext[' + DIST_CONTEXT_NAME + '].item',
         values: items
     });
     
-    log('Sent distribution Q' + queryCounter + ' to CODAP');
+    log('Distribution send result: ' + JSON.stringify(result));
 }
 
 async function sendCompletedSentenceToCODAP(sampleType) {
-    if (!codapConnected) return;
+    if (!codapConnected) {
+        log('CODAP not connected - skipping sentence send');
+        return;
+    }
     
     runCounter++;
     
     var fullSentence = buildFullSentence();
     var pathScore = slots.reduce((prod, s) => prod * (s.probability || 1), 1);
     
-    // Create parent case
-    var parentResult = await codapInterface.sendRequest({
-        action: 'create',
-        resource: 'dataContext[' + DATA_CONTEXT_NAME + '].collection[Sentences].case',
-        values: [{
-            values: {
-                Run_ID: 'Run_' + runCounter,
-                Full_Sentence: fullSentence,
-                Path_Score: pathScore,
-                Temperature: temperature,
-                Sample_Type: sampleType
-            }
-        }]
+    log('Sending completed sentence Run_' + runCounter + ' to CODAP');
+    
+    // Create one row per slot (flat structure)
+    var items = slots.map(function(slot, idx) {
+        return {
+            Run_ID: 'Run_' + runCounter,
+            Sample_Type: sampleType,
+            Template: templateText,
+            Full_Sentence: fullSentence,
+            Slot_Name: slot.name,
+            Word_Chosen: slot.word,
+            Word_Probability: slot.probability,
+            Path_Score: pathScore,
+            Temperature: temperature
+        };
     });
     
-    var parentId = null;
-    if (parentResult && parentResult.success && parentResult.values && parentResult.values[0]) {
-        parentId = parentResult.values[0].id;
-    }
+    log('Items to send: ' + JSON.stringify(items[0]));
     
-    // Create child cases
-    if (parentId) {
-        for (var i = 0; i < slots.length; i++) {
-            var slot = slots[i];
-            await codapInterface.sendRequest({
-                action: 'create',
-                resource: 'dataContext[' + DATA_CONTEXT_NAME + '].collection[Slots].case',
-                values: [{
-                    parent: parentId,
-                    values: {
-                        Slot_Name: slot.name,
-                        Slot_Index: i + 1,
-                        Word_Chosen: slot.word,
-                        Word_Probability: slot.probability,
-                        Word_Percentage: (slot.probability || 0) * 100
-                    }
-                }]
-            });
-        }
-    }
+    var result = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext[' + DATA_CONTEXT_NAME + '].item',
+        values: items
+    });
     
-    log('Sent completed sentence Run_' + runCounter + ' to CODAP');
+    log('Sentence send result: ' + JSON.stringify(result));
 }
 
 // ============================================
