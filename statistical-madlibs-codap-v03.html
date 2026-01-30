@@ -1833,6 +1833,28 @@ function getRestOfTemplate(slotIndex) {
     return rest;
 }
 
+function getFullTemplateWithPlaceholders() {
+    // Get the full template with all slots shown as [SlotName] placeholders
+    var result = '';
+    var lastEnd = 0;
+
+    for (var i = 0; i < slots.length; i++) {
+        var slot = slots[i];
+        // Add text before this slot
+        result += templateText.substring(lastEnd, slot.startPos);
+        // Add slot as placeholder
+        result += '[' + slot.name + ']';
+        lastEnd = slot.endPos;
+    }
+
+    // Add any remaining text after the last slot
+    if (lastEnd < templateText.length) {
+        result += templateText.substring(lastEnd);
+    }
+
+    return result;
+}
+
 function buildFullPrompt(slotIndex) {
     var context = buildContextForSlot(slotIndex);
     var slot = slots[slotIndex];
@@ -1842,15 +1864,16 @@ function buildFullPrompt(slotIndex) {
     var useChatFormat = useChat ? useChat.checked : true;
     var includeRest = includeRestOfTemplate ? includeRestOfTemplate.checked : false;
 
-    // If including rest of template, append it with a blank marker
-    var restOfTemplate = '';
-    if (includeRest) {
-        restOfTemplate = getRestOfTemplate(slotIndex);
-    }
-
     // Replace [SLOT] placeholder with actual slot name
     var prefix = prefixTemplate.replace(/\[SLOT\]/gi, '[' + slot.name + ']');
     var suffix = suffixTemplate.replace(/\[SLOT\]/gi, '[' + slot.name + ']');
+
+    // If including rest of template, build full template as context hint
+    var contextHint = '';
+    if (includeRest) {
+        var fullTemplate = getFullTemplateWithPlaceholders();
+        contextHint = 'Complete the sentence. Full template: "' + fullTemplate + '"\n\nNow continue with the next word for [' + slot.name + ']:\n\n';
+    }
 
     var fullPrompt;
 
@@ -1860,11 +1883,11 @@ function buildFullPrompt(slotIndex) {
         if (prefix) {
             userMessage = prefix + '\n\n';
         }
-        userMessage += context;
-        // Include rest of template with blank marker if enabled
-        if (restOfTemplate) {
-            userMessage += '___' + restOfTemplate + '\n\nFill in the blank (___) for [' + slot.name + ']:';
+        // Add context hint (full template) before the completion context
+        if (contextHint) {
+            userMessage += contextHint;
         }
+        userMessage += context;
         if (suffix) {
             userMessage += suffix;
         }
@@ -1880,11 +1903,11 @@ function buildFullPrompt(slotIndex) {
         if (prefix) {
             fullPrompt = prefix + '\n\n';
         }
-        fullPrompt += context;
-        // Include rest of template with blank marker if enabled
-        if (restOfTemplate) {
-            fullPrompt += '___' + restOfTemplate + '\n\nFill in the blank (___) for [' + slot.name + ']:';
+        // Add context hint (full template) before the completion context
+        if (contextHint) {
+            fullPrompt += contextHint;
         }
+        fullPrompt += context;
         if (suffix) {
             fullPrompt += suffix;
         }
