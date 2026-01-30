@@ -1008,6 +1008,10 @@
                 <input type="checkbox" id="addSpaceBeforeSlot" checked>
                 Add space before slot completion
             </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="includeRestOfTemplate">
+                Include rest of template (provides full context)
+            </label>
         </div>
     </details>
 
@@ -1171,7 +1175,7 @@ var slotSampleN, slotSampleBtn, seqSampleN, seqSampleBtn;
 var pathScoreDisplay, pathScoreValue;
 var codapDot, codapStatus;
 var systemPrefix, contextSuffix, promptPreview, lastModelInput;
-var useChat, addSpaceBeforeSlot, copyPromptBtn, promptPreset;
+var useChat, addSpaceBeforeSlot, includeRestOfTemplate, copyPromptBtn, promptPreset;
 var samplerStatus, samplerStatusText, samplerStatusHint;
 var showProbabilities, showCandidatesPanelCheckbox, showPathScore, openProbTableBtn;
 
@@ -1208,6 +1212,7 @@ function initDOMRefs() {
     lastModelInput = document.getElementById('lastModelInput');
     useChat = document.getElementById('useChat');
     addSpaceBeforeSlot = document.getElementById('addSpaceBeforeSlot');
+    includeRestOfTemplate = document.getElementById('includeRestOfTemplate');
     copyPromptBtn = document.getElementById('copyPromptBtn');
     promptPreset = document.getElementById('promptPreset');
     samplerStatus = document.getElementById('samplerStatus');
@@ -1805,6 +1810,29 @@ function buildContextForSlot(slotIndex) {
     return context;
 }
 
+function getRestOfTemplate(slotIndex) {
+    // Get template text after the current slot, with remaining slots shown as placeholders
+    var slot = slots[slotIndex];
+    var rest = '';
+    var lastEnd = slot.endPos;
+
+    for (var i = slotIndex + 1; i < slots.length; i++) {
+        var nextSlot = slots[i];
+        // Add text between slots
+        rest += templateText.substring(lastEnd, nextSlot.startPos);
+        // Add the slot placeholder (or filled word if already completed)
+        rest += nextSlot.word || '[' + nextSlot.name + ']';
+        lastEnd = nextSlot.endPos;
+    }
+
+    // Add any remaining text after the last slot
+    if (lastEnd < templateText.length) {
+        rest += templateText.substring(lastEnd);
+    }
+
+    return rest;
+}
+
 function buildFullPrompt(slotIndex) {
     var context = buildContextForSlot(slotIndex);
     var slot = slots[slotIndex];
@@ -1812,13 +1840,20 @@ function buildFullPrompt(slotIndex) {
     var suffixTemplate = contextSuffix ? contextSuffix.value : '';
     var addSpace = addSpaceBeforeSlot ? addSpaceBeforeSlot.checked : true;
     var useChatFormat = useChat ? useChat.checked : true;
-    
+    var includeRest = includeRestOfTemplate ? includeRestOfTemplate.checked : false;
+
+    // If including rest of template, append it with a blank marker
+    var restOfTemplate = '';
+    if (includeRest) {
+        restOfTemplate = getRestOfTemplate(slotIndex);
+    }
+
     // Replace [SLOT] placeholder with actual slot name
     var prefix = prefixTemplate.replace(/\[SLOT\]/gi, '[' + slot.name + ']');
     var suffix = suffixTemplate.replace(/\[SLOT\]/gi, '[' + slot.name + ']');
-    
+
     var fullPrompt;
-    
+
     if (useChatFormat) {
         // Build as a chat-style prompt
         var userMessage = '';
@@ -1826,13 +1861,17 @@ function buildFullPrompt(slotIndex) {
             userMessage = prefix + '\n\n';
         }
         userMessage += context;
+        // Include rest of template with blank marker if enabled
+        if (restOfTemplate) {
+            userMessage += '___' + restOfTemplate + '\n\nFill in the blank (___) for [' + slot.name + ']:';
+        }
         if (suffix) {
             userMessage += suffix;
         }
         if (addSpace && !userMessage.endsWith(' ')) {
             userMessage += ' ';
         }
-        
+
         // For instruct models, we simulate chat format
         fullPrompt = '<|im_start|>user\n' + userMessage + '<|im_end|>\n<|im_start|>assistant\n';
     } else {
@@ -1842,6 +1881,10 @@ function buildFullPrompt(slotIndex) {
             fullPrompt = prefix + '\n\n';
         }
         fullPrompt += context;
+        // Include rest of template with blank marker if enabled
+        if (restOfTemplate) {
+            fullPrompt += '___' + restOfTemplate + '\n\nFill in the blank (___) for [' + slot.name + ']:';
+        }
         if (suffix) {
             fullPrompt += suffix;
         }
@@ -2479,9 +2522,10 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         'fill-blank': {
             prefix: 'Fill in the blank [SLOT] with the most appropriate single word.',
-            suffix: '\n\nThe [SLOT] is:',
+            suffix: '',
             useChat: true,
-            addSpace: false
+            addSpace: false,
+            includeRest: true
         },
         'story': {
             prefix: 'Continue this story. The next word should be a [SLOT]. Reply with only that word.',
@@ -2505,6 +2549,7 @@ document.addEventListener('DOMContentLoaded', function() {
             contextSuffix.value = preset.suffix;
             useChat.checked = preset.useChat;
             addSpaceBeforeSlot.checked = preset.addSpace;
+            includeRestOfTemplate.checked = preset.includeRest || false;
             updatePromptPreview();
         }
     });
@@ -2525,7 +2570,11 @@ document.addEventListener('DOMContentLoaded', function() {
         promptPreset.value = 'custom';
         updatePromptPreview();
     });
-    
+    includeRestOfTemplate.addEventListener('change', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+
     copyPromptBtn.addEventListener('click', function() {
         if (activeSlotIndex >= 0) {
             var promptData = buildFullPrompt(activeSlotIndex);
