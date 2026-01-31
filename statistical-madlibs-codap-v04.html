@@ -792,7 +792,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260131a</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260131b</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -1568,8 +1568,45 @@ async function openDifferentnessTable() {
 // Connect to CODAP Sampler Plugin
 // ============================================
 
-var SAMPLER_CONTEXT_NAME = 'Sampler Data';
 var SAMPLER_ITEMS_COLLECTION = 'items';
+
+/**
+ * Find the Sampler's data context by listing all contexts and looking for one
+ * that has the Sampler's characteristic structure (experiments/samples/items).
+ */
+async function findSamplerContext() {
+    var listResult = await codapInterface.sendRequest({
+        action: 'get',
+        resource: 'dataContextList'
+    });
+
+    if (!listResult.success || !listResult.values) {
+        return null;
+    }
+
+    log('Available data contexts: ' + listResult.values.map(function(c) { return c.name; }).join(', '));
+
+    // Look for a context that looks like Sampler output
+    for (var i = 0; i < listResult.values.length; i++) {
+        var ctx = listResult.values[i];
+        // Check if it has the 'items' collection (characteristic of Sampler)
+        var collResult = await codapInterface.sendRequest({
+            action: 'get',
+            resource: 'dataContext[' + ctx.name + '].collectionList'
+        });
+
+        if (collResult.success && collResult.values) {
+            var hasItems = collResult.values.some(function(c) { return c.name === 'items'; });
+            var hasSamples = collResult.values.some(function(c) { return c.name === 'samples'; });
+            if (hasItems && hasSamples) {
+                log('Found Sampler context: ' + ctx.name);
+                return ctx.name;
+            }
+        }
+    }
+
+    return null;
+}
 
 /**
  * Connect to the CODAP Sampler plugin's output and add running percentage columns.
@@ -1593,21 +1630,18 @@ async function connectToSampler() {
 
     log('Connecting to Sampler with ' + candidates.length + ' candidates');
 
-    // Check if Sampler Data context exists
-    var contextCheck = await codapInterface.sendRequest({
-        action: 'get',
-        resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + ']'
-    });
+    // Find the Sampler's data context
+    var samplerContextName = await findSamplerContext();
 
-    if (!contextCheck.success) {
-        alert('Could not find "' + SAMPLER_CONTEXT_NAME + '" data context.\n\nPlease:\n1. Open the Sampler plugin\n2. Set up your mixer/spinner\n3. Run at least one sample\n4. Then click "Connect to Sampler" again.');
+    if (!samplerContextName) {
+        alert('Could not find Sampler data context.\n\nPlease:\n1. Open the Sampler plugin\n2. Set up your mixer/spinner\n3. Run at least one sample\n4. Then click "Connect to Sampler" again.');
         return;
     }
 
     // Get the output attribute name from the Sampler (it might be renamed by user)
     var attrsResult = await codapInterface.sendRequest({
         action: 'get',
-        resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attributeList'
+        resource: 'dataContext[' + samplerContextName + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attributeList'
     });
 
     var outputAttrName = 'output';  // default
@@ -1633,7 +1667,7 @@ async function connectToSampler() {
         // Check if column already exists
         var existingCheck = await codapInterface.sendRequest({
             action: 'get',
-            resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute[Pct_' + sanitized + ']'
+            resource: 'dataContext[' + samplerContextName + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute[Pct_' + sanitized + ']'
         });
 
         if (existingCheck.success) {
@@ -1647,7 +1681,7 @@ async function connectToSampler() {
 
         await codapInterface.sendRequest({
             action: 'create',
-            resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute',
+            resource: 'dataContext[' + samplerContextName + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute',
             values: {
                 name: countColName,
                 title: 'Count ' + word,
@@ -1664,7 +1698,7 @@ async function connectToSampler() {
 
         await codapInterface.sendRequest({
             action: 'create',
-            resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute',
+            resource: 'dataContext[' + samplerContextName + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute',
             values: {
                 name: pctColName,
                 title: '% ' + word,
@@ -1683,15 +1717,15 @@ async function connectToSampler() {
     await codapInterface.sendRequest({
         action: 'create',
         resource: 'component',
-        values: { type: 'caseTable', dataContext: SAMPLER_CONTEXT_NAME }
+        values: { type: 'caseTable', dataContext: samplerContextName }
     });
 
     if (addedCount > 0) {
         log('Connected to Sampler: added ' + addedCount + ' percentage columns');
-        alert('Connected! Added ' + addedCount + ' running percentage columns to "' + SAMPLER_CONTEXT_NAME + '".\n\nNow run the Sampler and watch the percentages converge to the theoretical values.');
+        alert('Connected! Added ' + addedCount + ' running percentage columns to "' + samplerContextName + '".\n\nNow run the Sampler and watch the percentages converge to the theoretical values.');
     } else {
         log('All percentage columns already existed');
-        alert('Percentage columns already exist in "' + SAMPLER_CONTEXT_NAME + '".');
+        alert('Percentage columns already exist in "' + samplerContextName + '".');
     }
 }
 
