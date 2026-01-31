@@ -1,0 +1,2782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/iframe-phone@1.2.0/dist/iframe-phone.js"></script>
+    <title>Statistical Mad Libs - CODAP Plugin</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap');
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --bg-cream: #faf8f5;
+            --bg-warm: #f5f0e8;
+            --text-dark: #2d2a26;
+            --text-muted: #6b6560;
+            --accent-teal: #1d7a8c;
+            --accent-teal-light: #e8f4f6;
+            --accent-coral: #d35f5f;
+            --accent-coral-light: #fdf0f0;
+            --accent-gold: #c9a227;
+            --accent-gold-light: #fdf8e8;
+            --slot-purple: #7c5cbf;
+            --slot-purple-light: #f3f0fa;
+            --border-light: #e5e0d8;
+            --shadow-soft: 0 2px 8px rgba(45, 42, 38, 0.08);
+            --shadow-medium: 0 4px 16px rgba(45, 42, 38, 0.12);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+        }
+        
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg-cream);
+            color: var(--text-dark);
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 16px;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .header h1 {
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 1.4em;
+            font-weight: 600;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .header h1 span { font-size: 1.2em; }
+        
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            background: var(--bg-warm);
+            border-radius: 20px;
+        }
+        
+        .connection-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        
+        .connection-dot.connected { background: #22c55e; }
+        
+        /* Status Bar */
+        .status-bar {
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            margin-bottom: 14px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-loading { background: var(--accent-gold-light); color: #92710a; }
+        .status-ready { background: #e8f5e9; color: #2e7d32; }
+        .status-error { background: var(--accent-coral-light); color: #b33b3b; }
+        
+        .progress-container {
+            height: 4px;
+            background: var(--border-light);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-teal), var(--slot-purple));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        /* Template Section */
+        .section {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-soft);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        
+        .template-input {
+            width: 100%;
+            padding: 12px;
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 16px;
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-md);
+            background: var(--bg-cream);
+            resize: vertical;
+            min-height: 60px;
+            transition: border-color 0.2s;
+        }
+        
+        .template-input:focus {
+            outline: none;
+            border-color: var(--accent-teal);
+        }
+        
+        .template-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-style: italic;
+        }
+        
+        /* Sentence Display */
+        .sentence-display {
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 18px;
+            line-height: 1.8;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--bg-warm) 0%, white 100%);
+            border-radius: var(--radius-md);
+            min-height: 60px;
+        }
+        
+        .slot {
+            display: inline-block;
+            padding: 2px 10px;
+            margin: 2px 4px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .slot.empty {
+            background: var(--slot-purple-light);
+            border: 2px dashed var(--slot-purple);
+            color: var(--slot-purple);
+            font-style: italic;
+        }
+        
+        .slot.filled {
+            background: var(--accent-teal-light);
+            border: 2px solid var(--accent-teal);
+            color: var(--accent-teal);
+            font-weight: 600;
+        }
+        
+        .slot.active {
+            box-shadow: 0 0 0 3px rgba(125, 92, 191, 0.3);
+            transform: scale(1.02);
+        }
+        
+        .slot:hover:not(.locked) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .slot.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .slot-prob {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--accent-gold);
+            color: white;
+            font-size: 9px;
+            font-weight: 600;
+            padding: 2px 5px;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+        }
+        
+        /* Hide probability badges by default */
+        .slot-prob.hidden { display: none; }
+        
+        /* Controls */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        
+        .control-group {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 12px;
+        }
+        
+        .control-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .control-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent-teal);
+        }
+        
+        .slider-track {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-light);
+            position: relative;
+            margin-top: 8px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: transparent;
+            margin-top: 8px;
+        }
+        
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 6px;
+            background: linear-gradient(90deg, var(--accent-teal-light), var(--accent-teal));
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border: 3px solid var(--accent-teal);
+            border-radius: 50%;
+            margin-top: -6px;
+            cursor: pointer;
+            box-shadow: var(--shadow-soft);
+        }
+        
+        input[type="number"] {
+            width: 60px;
+            padding: 6px 8px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            text-align: center;
+        }
+        
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--slot-purple), #9575cd);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .btn-sample {
+            background: linear-gradient(135deg, var(--accent-teal), #26a69a);
+            color: white;
+        }
+        
+        .btn-sample:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-warm);
+            color: var(--text-dark);
+            border: 1px solid var(--border-light);
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--border-light);
+        }
+        
+        .btn-danger {
+            background: var(--accent-coral-light);
+            color: var(--accent-coral);
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: var(--accent-coral);
+            color: white;
+        }
+        
+        /* Candidate Panel */
+        .candidates-panel {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 14px;
+            display: none;
+        }
+        
+        .candidates-panel.visible { display: block; }
+        
+        .candidates-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .candidates-title {
+            font-weight: 600;
+            color: var(--slot-purple);
+        }
+        
+        .candidates-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .candidate-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: var(--bg-cream);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .candidate-item:hover {
+            background: var(--accent-teal-light);
+            transform: translateX(3px);
+        }
+        
+        .candidate-rank {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            width: 20px;
+        }
+        
+        .candidate-word {
+            flex: 1;
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .candidate-bar-container {
+            flex: 1;
+            height: 8px;
+            background: var(--border-light);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .candidate-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-teal), var(--slot-purple));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .candidate-prob {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-teal);
+            min-width: 45px;
+            text-align: right;
+        }
+        
+        /* Sampler Ready Status */
+        .sampler-status {
+            background: linear-gradient(135deg, var(--accent-teal-light), var(--slot-purple-light));
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 14px;
+            display: none;
+        }
+        
+        .sampler-status.visible { display: block; }
+        
+        .sampler-status-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .sampler-status-icon {
+            font-size: 24px;
+        }
+        
+        .sampler-status-text {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .sampler-status-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        
+        /* Sampling Controls - Hidden by default */
+        .sampling-section {
+            background: linear-gradient(135deg, var(--slot-purple-light), var(--accent-teal-light));
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        
+        .sampling-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .sampling-row:last-child { margin-bottom: 0; }
+        
+        .sampling-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-dark);
+            min-width: 140px;
+        }
+        
+        .sampling-desc {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+        
+        /* Reveal Section */
+        .reveal-section {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+        
+        .reveal-toggle {
+            padding: 12px 14px;
+            background: var(--bg-warm);
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 12px;
+            color: var(--text-muted);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .reveal-toggle::-webkit-details-marker { display: none; }
+        
+        .reveal-toggle::before {
+            content: '▶';
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+        
+        details[open] .reveal-toggle::before {
+            transform: rotate(90deg);
+        }
+        
+        .reveal-content {
+            padding: 12px 14px;
+            border-top: 1px solid var(--border-light);
+        }
+        
+        .reveal-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .reveal-option:last-child { margin-bottom: 0; }
+        
+        .reveal-option label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .reveal-option input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .reveal-hint {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-left: 26px;
+        }
+        
+        /* Debug Log */
+        .debug-log {
+            font-size: 10px;
+            color: var(--text-muted);
+            background: var(--bg-warm);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 8px;
+            max-height: 100px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, monospace;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        
+        /* Path Score Display */
+        .path-score {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: var(--accent-gold-light);
+            border-radius: var(--radius-md);
+            margin-top: 10px;
+        }
+        
+        .path-score-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        
+        .path-score-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+        
+        .hidden { display: none !important; }
+        
+        /* Prompt Engineering Section */
+        .prompt-engineering {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+        
+        .prompt-toggle {
+            padding: 12px 14px;
+            background: var(--bg-warm);
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 12px;
+            color: var(--text-muted);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .prompt-toggle::-webkit-details-marker { display: none; }
+        
+        .prompt-toggle::before {
+            content: '▶';
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+        
+        details[open] .prompt-toggle::before {
+            transform: rotate(90deg);
+        }
+        
+        .prompt-section {
+            padding: 12px 14px;
+            border-top: 1px solid var(--border-light);
+        }
+        
+        .prompt-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        
+        .prompt-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        
+        .prompt-label-row .prompt-label {
+            margin-bottom: 0;
+        }
+        
+        .prompt-textarea {
+            width: 100%;
+            padding: 10px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 12px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: var(--bg-cream);
+            resize: vertical;
+            line-height: 1.4;
+        }
+        
+        .prompt-textarea:focus {
+            outline: none;
+            border-color: var(--accent-teal);
+        }
+        
+        .prompt-preview {
+            padding: 10px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 11px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: var(--radius-sm);
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 120px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+        
+        .prompt-preview .highlight-context {
+            color: #9cdcfe;
+        }
+        
+        .prompt-preview .highlight-prefix {
+            color: #ce9178;
+        }
+        
+        .prompt-preview .highlight-suffix {
+            color: #b5cea8;
+        }
+        
+        .prompt-preview .highlight-slot {
+            color: #dcdcaa;
+            background: rgba(220, 220, 170, 0.2);
+            padding: 1px 3px;
+            border-radius: 2px;
+        }
+        
+        .prompt-preview.model-input {
+            background: #0d1117;
+            color: #8b949e;
+            font-size: 10px;
+        }
+        
+        .prompt-options {
+            padding: 10px 14px;
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-dark);
+            cursor: pointer;
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .loading { animation: pulse 1.5s ease-in-out infinite; }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in { animation: slideIn 0.3s ease-out; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span>🎰</span> Statistical Mad Libs</h1>
+        <div class="connection-badge">
+            <span class="connection-dot" id="codapDot"></span>
+            <span id="codapStatus">Initializing...</span>
+        </div>
+    </div>
+    
+    <div id="modelStatus" class="status-bar status-loading">
+        <span>⏳</span> Loading language model...
+    </div>
+    <div class="progress-container" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+    
+    <!-- Template Input -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-title">📝 Template</span>
+            <button class="btn btn-secondary" id="parseBtn" style="padding: 6px 12px; font-size: 11px;">
+                Parse Template
+            </button>
+        </div>
+        <textarea class="template-input" id="templateInput" rows="2">The longest river in the world is the [River Name] river, located in [location].</textarea>
+        <div class="template-hint">Use [SlotName] to create blanks. Example: The [Animal] jumped over the [Object].</div>
+    </div>
+    
+    <!-- Live Sentence Display -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-title">📖 Your Sentence</span>
+            <div class="path-score hidden" id="pathScoreDisplay" style="margin: 0; padding: 6px 10px;">
+                <span class="path-score-label">Path Score:</span>
+                <span class="path-score-value" id="pathScoreValue">—</span>
+            </div>
+        </div>
+        <div class="sentence-display" id="sentenceDisplay">
+            <span class="text-segment">Click "Parse Template" to begin</span>
+        </div>
+    </div>
+    
+    <!-- Controls -->
+    <div class="controls-grid">
+        <div class="control-group">
+            <div class="control-label">
+                <span>🌡️ Temperature</span>
+                <span class="control-value" id="tempValue">1.0</span>
+            </div>
+            <input type="range" id="tempSlider" min="0.1" max="2.0" step="0.05" value="1.0">
+        </div>
+        <div class="control-group">
+            <div class="control-label">
+                <span>🎯 Top-K</span>
+                <span class="control-value" id="topKValue">10</span>
+            </div>
+            <input type="range" id="topKSlider" min="2" max="20" step="1" value="10">
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-title">🎮 Actions</span>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="prepareSlotBtn" disabled>
+                🎰 Prepare Slot
+            </button>
+            <button class="btn btn-secondary" id="refreshBtn" disabled>
+                🔄 Refresh Downstream
+            </button>
+            <button class="btn btn-danger" id="resetBtn">
+                ✖ Reset All
+            </button>
+        </div>
+    </div>
+    
+    <!-- Sampler Ready Status -->
+    <div class="sampler-status" id="samplerStatus">
+        <div class="sampler-status-header">
+            <span class="sampler-status-icon">✅</span>
+            <span class="sampler-status-text" id="samplerStatusText">Ready for sampling!</span>
+        </div>
+        <div class="sampler-status-hint" id="samplerStatusHint">
+            Open the <strong>Sampler</strong> plugin, switch to <strong>Collector</strong> mode, and select 
+            the word table to sample from the language model's predictions.
+        </div>
+    </div>
+    
+    <!-- Candidates Panel (hidden by default, shown when probabilities are revealed) -->
+    <div class="candidates-panel" id="candidatesPanel">
+        <div class="candidates-header">
+            <span class="candidates-title" id="candidatesTitle">Candidates for [Slot]</span>
+            <button class="btn btn-secondary" id="closeCandidates" style="padding: 4px 10px; font-size: 11px;">✕ Close</button>
+        </div>
+        <div class="candidates-list" id="candidatesList"></div>
+    </div>
+    
+    <!-- Reveal Section (Peek Behind the Curtain) -->
+    <details class="reveal-section" id="revealSection">
+        <summary class="reveal-toggle">🔍 Peek Behind the Curtain (reveal probabilities)</summary>
+        <div class="reveal-content">
+            <div class="reveal-option">
+                <label>
+                    <input type="checkbox" id="showProbabilities">
+                    Show probability badges on filled slots
+                </label>
+            </div>
+            <div class="reveal-hint">See the probability of each word chosen</div>
+            
+            <div class="reveal-option">
+                <label>
+                    <input type="checkbox" id="showCandidatesPanel">
+                    Show candidate words panel
+                </label>
+            </div>
+            <div class="reveal-hint">See all top-K word candidates with probability bars</div>
+            
+            <div class="reveal-option">
+                <label>
+                    <input type="checkbox" id="showPathScore">
+                    Show path score
+                </label>
+            </div>
+            <div class="reveal-hint">See the cumulative probability of the word sequence</div>
+            
+            <div class="reveal-option" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-light);">
+                <button class="btn btn-secondary" id="openProbTableBtn" disabled style="padding: 6px 12px; font-size: 11px;">
+                    📊 Open Probability Table
+                </button>
+                <button class="btn btn-secondary" id="openDiffTableBtn" disabled style="padding: 6px 12px; font-size: 11px; margin-left: 8px;">
+                    📈 Open Variability Table
+                </button>
+            </div>
+            <div class="reveal-hint">View probability distribution or variability tracking in CODAP</div>
+        </div>
+    </details>
+    
+    <!-- Direct Sampling Section (for internal sampling, mostly hidden now) -->
+    <details class="prompt-engineering" id="directSamplingSection">
+        <summary class="prompt-toggle">🎲 Direct Sampling (bypass Sampler)</summary>
+        <div class="prompt-section">
+            <div class="sampling-row">
+                <span class="sampling-label">Fill this slot:</span>
+                <button class="btn btn-sample" id="sampleSlotBtn" disabled style="padding: 6px 12px;">
+                    🎲 Sample Word
+                </button>
+                <span class="sampling-desc">Sample directly from model</span>
+            </div>
+            
+            <div class="sampling-row">
+                <span class="sampling-label">Slot-Level Samples:</span>
+                <input type="number" id="slotSampleN" min="1" max="100" value="20">
+                <button class="btn btn-sample" id="slotSampleBtn" disabled style="padding: 6px 12px;">
+                    Run N Samples
+                </button>
+                <span class="sampling-desc">Sample this slot N times</span>
+            </div>
+            
+            <div class="sampling-row">
+                <span class="sampling-label">Sequence-Level Samples:</span>
+                <input type="number" id="seqSampleN" min="1" max="50" value="10">
+                <button class="btn btn-sample" id="seqSampleBtn" disabled style="padding: 6px 12px;">
+                    Generate N Sentences
+                </button>
+                <span class="sampling-desc">Complete full sentences</span>
+            </div>
+        </div>
+    </details>
+    
+    <!-- Prompt Engineering Section (Collapsible) -->
+    <details class="prompt-engineering" id="promptEngineering">
+        <summary class="prompt-toggle">🔧 Prompt Engineering (click to expand)</summary>
+        
+        <div class="prompt-section">
+            <div class="prompt-label-row">
+                <label class="prompt-label">Prompt Preset:</label>
+                <select id="promptPreset" style="padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border-light);">
+                    <option value="completion">Simple Completion</option>
+                    <option value="fill-blank">Fill in the Blank</option>
+                    <option value="story">Story Continuation</option>
+                    <option value="minimal">Minimal (no prefix)</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="prompt-section">
+            <label class="prompt-label">System Prefix (prepended to context):</label>
+            <textarea class="prompt-textarea" id="systemPrefix" rows="2">Fill in [SLOT] with one word.</textarea>
+            <div class="template-hint">Use [SLOT] to insert the current slot name (e.g., [Animal], [Object])</div>
+        </div>
+        
+        <div class="prompt-section">
+            <label class="prompt-label">Context Suffix (appended after context, before generation):</label>
+            <textarea class="prompt-textarea" id="contextSuffix" rows="1"></textarea>
+        </div>
+        
+        <div class="prompt-section">
+            <div class="prompt-label-row">
+                <label class="prompt-label">Live Prompt Preview:</label>
+                <button class="btn btn-secondary" id="copyPromptBtn" style="padding: 4px 8px; font-size: 10px;">📋 Copy</button>
+            </div>
+            <div class="prompt-preview" id="promptPreview">Parse a template and select a slot to see the prompt</div>
+        </div>
+        
+        <div class="prompt-section">
+            <label class="prompt-label">Last Model Input (actual tokens sent):</label>
+            <div class="prompt-preview model-input" id="lastModelInput">—</div>
+        </div>
+        
+        <div class="prompt-options">
+            <label class="checkbox-label">
+                <input type="checkbox" id="useChat" checked>
+                Use chat format (recommended for instruct models)
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="addSpaceBeforeSlot" checked>
+                Add space before slot completion
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="includeRestOfTemplate">
+                Include rest of template (provides full context)
+            </label>
+        </div>
+    </details>
+
+    <div class="debug-log" id="debugLog"></div>
+
+<script>
+// ============================================
+// CODAP Interface (iframe-phone)
+// ============================================
+
+var codapInterface = (function() {
+    var phone = null;
+    var connected = false;
+    var notificationSubscribers = {};
+
+    function notificationHandler(request, callback) {
+        var action = request.action;
+        var resource = request.resource;
+        
+        if (action === 'notify' && notificationSubscribers[resource]) {
+            notificationSubscribers[resource].forEach(function(handler) {
+                handler(request);
+            });
+        }
+        
+        if (callback) callback({ success: true });
+    }
+    
+    return {
+        init: function(config) {
+            log('codapInterface.init called');
+            
+            if (window.parent === window) {
+                log('Not in iframe - standalone mode');
+                return Promise.resolve({ success: false });
+            }
+            
+            return new Promise(function(resolve) {
+                phone = new iframePhone.IframePhoneRpcEndpoint(
+                    notificationHandler, 
+                    "data-interactive", 
+                    window.parent
+                );
+
+                phone.call({
+                    action: 'update',
+                    resource: 'interactiveFrame',
+                    values: {
+                        name: config.name || 'Plugin',
+                        title: config.title || 'Plugin',
+                        version: config.version || '1.0',
+                        dimensions: config.dimensions || { width: 450, height: 700 },
+                        preventDataContextReorg: config.preventDataContextReorg || false
+                    }
+                }, function(result) {
+                    if (result && result.success) {
+                        connected = true;
+                        log('✅ CODAP connected');
+                        resolve({ success: true });
+                    } else {
+                        log('❌ Connection failed');
+                        resolve({ success: false });
+                    }
+                });
+                
+                // Timeout to ensure model loading proceeds even if CODAP doesn't respond
+                setTimeout(function() {
+                    if (!connected) {
+                        log('Connection timed out');
+                        resolve({ success: false });
+                    }
+                }, 5000);
+            });
+        },
+        
+        sendRequest: function(request) {
+            return new Promise(function(resolve) {
+                if (!phone || !connected) {
+                    log('⚠️ CODAP sendRequest failed: Not connected');
+                    resolve({ success: false, error: 'Not connected' });
+                    return;
+                }
+                
+                log('→ CODAP: ' + request.action + ' ' + request.resource);
+                
+                phone.call(request, function(response) {
+                    if (response && response.success) {
+                        log('← CODAP: ✓ success');
+                    } else {
+                        log('← CODAP: ✗ failed - ' + JSON.stringify(response));
+                    }
+                    resolve(response);
+                });
+            });
+        },
+        
+        on: function(resource, eventType, handler) {
+            var key = resource;
+            if (!notificationSubscribers[key]) {
+                notificationSubscribers[key] = [];
+            }
+            notificationSubscribers[key].push(handler);
+            
+            return codapInterface.sendRequest({
+                action: 'register',
+                resource: resource
+            });
+        }
+    };
+})();
+
+// ============================================
+// Debug Logger
+// ============================================
+
+var debugLog = null;
+function log(msg) {
+    console.log('[MadLibs] ' + msg);
+    if (!debugLog) debugLog = document.getElementById('debugLog');
+    if (debugLog) {
+        debugLog.textContent = msg + '\n' + debugLog.textContent;
+    }
+}
+
+// ============================================
+// Global State
+// ============================================
+
+var model = null;
+var tokenizer = null;
+var MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
+
+var templateText = '';
+var slots = [];
+var activeSlotIndex = -1;
+var temperature = 1.0;
+var topK = 10;
+
+var codapConnected = false;
+var runCounter = 0;
+var queryCounter = 0;
+var diffSampleCounter = 0;
+
+// Reveal mode state
+var showProbabilitiesEnabled = false;
+var showCandidatesPanelEnabled = false;
+var showPathScoreEnabled = false;
+
+// System prompt for completion mode
+var SYSTEM_PROMPT = 'Complete the following text naturally with a single word. Only output the completion word, nothing else.';
+
+// ============================================
+// DOM References
+// ============================================
+
+var modelStatusEl, progressBar, progressFill;
+var templateInput, sentenceDisplay;
+var tempSlider, tempValue, topKSlider, topKValue;
+var parseBtn, prepareSlotBtn, sampleSlotBtn, refreshBtn, resetBtn;
+var candidatesPanel, candidatesList, candidatesTitle, closeCandidates;
+var slotSampleN, slotSampleBtn, seqSampleN, seqSampleBtn;
+var pathScoreDisplay, pathScoreValue;
+var codapDot, codapStatus;
+var systemPrefix, contextSuffix, promptPreview, lastModelInput;
+var useChat, addSpaceBeforeSlot, includeRestOfTemplate, copyPromptBtn, promptPreset;
+var samplerStatus, samplerStatusText, samplerStatusHint;
+var showProbabilities, showCandidatesPanelCheckbox, showPathScore, openProbTableBtn, openDiffTableBtn;
+
+function initDOMRefs() {
+    modelStatusEl = document.getElementById('modelStatus');
+    progressBar = document.getElementById('progressBar');
+    progressFill = document.getElementById('progressFill');
+    templateInput = document.getElementById('templateInput');
+    sentenceDisplay = document.getElementById('sentenceDisplay');
+    tempSlider = document.getElementById('tempSlider');
+    tempValue = document.getElementById('tempValue');
+    topKSlider = document.getElementById('topKSlider');
+    topKValue = document.getElementById('topKValue');
+    parseBtn = document.getElementById('parseBtn');
+    prepareSlotBtn = document.getElementById('prepareSlotBtn');
+    sampleSlotBtn = document.getElementById('sampleSlotBtn');
+    refreshBtn = document.getElementById('refreshBtn');
+    resetBtn = document.getElementById('resetBtn');
+    candidatesPanel = document.getElementById('candidatesPanel');
+    candidatesList = document.getElementById('candidatesList');
+    candidatesTitle = document.getElementById('candidatesTitle');
+    closeCandidates = document.getElementById('closeCandidates');
+    slotSampleN = document.getElementById('slotSampleN');
+    slotSampleBtn = document.getElementById('slotSampleBtn');
+    seqSampleN = document.getElementById('seqSampleN');
+    seqSampleBtn = document.getElementById('seqSampleBtn');
+    pathScoreDisplay = document.getElementById('pathScoreDisplay');
+    pathScoreValue = document.getElementById('pathScoreValue');
+    codapDot = document.getElementById('codapDot');
+    codapStatus = document.getElementById('codapStatus');
+    systemPrefix = document.getElementById('systemPrefix');
+    contextSuffix = document.getElementById('contextSuffix');
+    promptPreview = document.getElementById('promptPreview');
+    lastModelInput = document.getElementById('lastModelInput');
+    useChat = document.getElementById('useChat');
+    addSpaceBeforeSlot = document.getElementById('addSpaceBeforeSlot');
+    includeRestOfTemplate = document.getElementById('includeRestOfTemplate');
+    copyPromptBtn = document.getElementById('copyPromptBtn');
+    promptPreset = document.getElementById('promptPreset');
+    samplerStatus = document.getElementById('samplerStatus');
+    samplerStatusText = document.getElementById('samplerStatusText');
+    samplerStatusHint = document.getElementById('samplerStatusHint');
+    showProbabilities = document.getElementById('showProbabilities');
+    showCandidatesPanelCheckbox = document.getElementById('showCandidatesPanel');
+    showPathScore = document.getElementById('showPathScore');
+    openProbTableBtn = document.getElementById('openProbTableBtn');
+    openDiffTableBtn = document.getElementById('openDiffTableBtn');
+}
+
+// ============================================
+// CODAP Data Setup
+// ============================================
+
+var DATA_CONTEXT_NAME = 'MadLibsData';
+var DIST_CONTEXT_NAME = 'SlotDistributions';
+var WORD_SAMPLER_PREFIX = 'Words_';
+var DIFF_CONTEXT_PREFIX = 'Variability_';
+
+async function createDataContext() {
+    log('Creating data contexts...');
+    
+    // Main data context for completed sentences/samples
+    var result = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext',
+        values: {
+            name: DATA_CONTEXT_NAME,
+            title: 'Mad Libs Sentences',
+            collections: [{
+                name: 'Samples',
+                title: 'Samples',
+                attrs: [
+                    { name: 'Run_ID', title: 'Run', type: 'categorical' },
+                    { name: 'Sample_Type', title: 'Type', type: 'categorical' },
+                    { name: 'Template', title: 'Template', type: 'categorical' },
+                    { name: 'Full_Sentence', title: 'Sentence', type: 'categorical' },
+                    { name: 'Slot_Name', title: 'Slot', type: 'categorical' },
+                    { name: 'Word_Chosen', title: 'Word', type: 'categorical' },
+                    { name: 'Word_Probability', title: 'Probability', type: 'numeric', precision: 4 },
+                    { name: 'Path_Score', title: 'Path Score', type: 'numeric', precision: 6 },
+                    { name: 'Temperature', title: 'Temp', type: 'numeric', precision: 2 }
+                ]
+            }]
+        }
+    });
+    
+    log('Main data context result: ' + JSON.stringify(result));
+    
+    // Distribution context for probability bar charts (hidden by default)
+    var distResult = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext',
+        values: {
+            name: DIST_CONTEXT_NAME,
+            title: 'Word Probabilities',
+            collections: [{
+                name: 'Candidates',
+                title: 'Candidate Words',
+                attrs: [
+                    { name: 'Query_ID', title: 'Query', type: 'categorical' },
+                    { name: 'Slot_Name', title: 'Slot', type: 'categorical' },
+                    { name: 'Rank', title: 'Rank', type: 'numeric' },
+                    { name: 'Word', title: 'Word', type: 'categorical' },
+                    { name: 'Probability', title: 'Probability', type: 'numeric', precision: 4 },
+                    { name: 'Percentage', title: 'Percent', type: 'numeric', precision: 2 },
+                    { name: 'Temperature', title: 'Temp', type: 'numeric', precision: 2 }
+                ]
+            }]
+        }
+    });
+    
+    log('Distribution context result: ' + JSON.stringify(distResult));
+    
+    // Only create main table, don't show distribution table by default
+    var tableResult = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'component',
+        values: { type: 'caseTable', dataContext: DATA_CONTEXT_NAME }
+    });
+    log('Main table result: ' + JSON.stringify(tableResult));
+}
+
+// ============================================
+// Differentness/Variability Tracking System
+// ============================================
+
+/**
+ * Build CODAP formulas for tracking "differentness" dynamically based on candidates.
+ * This creates formulas that work regardless of which specific words are in the distribution.
+ * 
+ * The key insight: for each draw, "Differentness" = 
+ *   "What fraction of all previous draws were DIFFERENT from this word?"
+ * 
+ * This converges to the coefficient of unalikeability as sample size grows.
+ */
+function buildDifferentnessFormulas(candidates) {
+    var formulas = {};
+    var numCandidates = candidates.length;
+    
+    // Create running count columns for each candidate word
+    candidates.forEach(function(c, idx) {
+        var colName = 'Count_' + (idx + 1);
+        var escapedWord = c.word.replace(/"/g, '\\"').replace(/'/g, "\\'");
+        formulas[colName] = {
+            formula: 'prev(' + colName + ', 0) + if(Word = "' + escapedWord + '", 1, 0)',
+            hidden: true,
+            description: 'Running count of "' + c.word + '"'
+        };
+    });
+    
+    // DrawNumber: which draw is this (1, 2, 3, ...)
+    formulas['DrawNumber'] = {
+        formula: 'prev(DrawNumber, 0) + 1',
+        hidden: true,
+        description: 'Sequential draw number'
+    };
+    
+    // MyCountBefore: how many times has THIS word appeared in all previous draws?
+    // Build a nested if to look up the correct count column based on the word
+    var nestedIf = '';
+    candidates.forEach(function(c, idx) {
+        var escapedWord = c.word.replace(/"/g, '\\"').replace(/'/g, "\\'");
+        var countCol = 'Count_' + (idx + 1);
+        if (idx === candidates.length - 1) {
+            // Last one - no more nesting needed
+            nestedIf += 'prev(' + countCol + ', 0)';
+        } else {
+            nestedIf += 'if(Word = "' + escapedWord + '", prev(' + countCol + ', 0), ';
+        }
+    });
+    // Close the nested ifs
+    nestedIf += ')'.repeat(candidates.length - 1);
+    
+    formulas['MyCountBefore'] = {
+        formula: nestedIf,
+        hidden: true,
+        description: 'Count of this word in previous draws'
+    };
+    
+    // TotalBefore: total number of draws before this one
+    formulas['TotalBefore'] = {
+        formula: 'DrawNumber - 1',
+        hidden: true,
+        description: 'Total draws before this one'
+    };
+    
+    // DifferentBefore: how many previous draws were DIFFERENT from this word
+    formulas['DifferentBefore'] = {
+        formula: 'TotalBefore - MyCountBefore',
+        hidden: true,
+        description: 'Count of different words before this draw'
+    };
+    
+    // Differentness: the percentage of previous draws that were different
+    // This is the key pedagogical measure!
+    formulas['Differentness'] = {
+        formula: 'if(TotalBefore > 0, round(100 * DifferentBefore / TotalBefore, 0), "")',
+        hidden: false,
+        description: 'What % of previous draws were different from this word?'
+    };
+    
+    return formulas;
+}
+
+/**
+ * Create or recreate the Differentness Tracker table for a slot.
+ * This table will track the "differentness" of each sampled word,
+ * showing how varied the samples are.
+ */
+async function createDifferentnessTracker(slot, candidates) {
+    if (!codapConnected) {
+        log('CODAP not connected - cannot create differentness tracker');
+        return null;
+    }
+    
+    var contextName = DIFF_CONTEXT_PREFIX + slot.name.replace(/\s+/g, '_');
+    
+    log('Creating differentness tracker: ' + contextName);
+    
+    // Build the dynamic formulas based on candidates
+    var formulas = buildDifferentnessFormulas(candidates);
+    
+    // Delete existing context if it exists
+    await codapInterface.sendRequest({
+        action: 'delete',
+        resource: 'dataContext[' + contextName + ']'
+    });
+    
+    // Build attribute list
+    var attrs = [
+        { name: 'Draw', title: 'Draw', type: 'numeric', description: 'Draw number' },
+        { name: 'Word', title: 'Word', type: 'categorical', description: 'The sampled word' }
+    ];
+    
+    // Add formula-based attributes
+    var formulaOrder = ['DrawNumber', 'TotalBefore'];
+    
+    // Add count columns
+    candidates.forEach(function(c, idx) {
+        formulaOrder.push('Count_' + (idx + 1));
+    });
+    
+    formulaOrder.push('MyCountBefore', 'DifferentBefore', 'Differentness');
+    
+    formulaOrder.forEach(function(colName) {
+        var f = formulas[colName];
+        if (f) {
+            attrs.push({
+                name: colName,
+                title: colName === 'Differentness' ? 'Differentness (%)' : colName.replace(/_/g, ' '),
+                type: 'numeric',
+                formula: f.formula,
+                hidden: f.hidden,
+                description: f.description
+            });
+        }
+    });
+    
+    // Create the context with formula columns
+    var createResult = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext',
+        values: {
+            name: contextName,
+            title: 'Variability: ' + slot.name,
+            collections: [{
+                name: 'Samples',
+                title: 'Sampled Words',
+                attrs: attrs
+            }]
+        }
+    });
+    
+    log('Differentness tracker created: ' + JSON.stringify(createResult));
+    
+    // Store reference in slot
+    slot.diffContextName = contextName;
+    slot.diffSampleCount = 0;
+    
+    return contextName;
+}
+
+/**
+ * Add a sampled word to the differentness tracker.
+ * The formulas will automatically compute the differentness.
+ */
+async function addToDifferentnessTracker(slot, word) {
+    if (!codapConnected || !slot.diffContextName) {
+        log('Cannot add to differentness tracker - not set up');
+        return;
+    }
+    
+    slot.diffSampleCount = (slot.diffSampleCount || 0) + 1;
+    
+    var result = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext[' + slot.diffContextName + '].item',
+        values: [{
+            Draw: slot.diffSampleCount,
+            Word: word
+        }]
+    });
+    
+    log('Added to differentness tracker: Draw ' + slot.diffSampleCount + ' = "' + word + '"');
+    
+    return result;
+}
+
+/**
+ * Open the differentness tracker table in CODAP
+ */
+async function openDifferentnessTable() {
+    if (!codapConnected) return;
+    
+    if (activeSlotIndex < 0 || !slots[activeSlotIndex].diffContextName) {
+        log('No differentness tracker for current slot');
+        return;
+    }
+    
+    var contextName = slots[activeSlotIndex].diffContextName;
+    
+    var result = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'component',
+        values: { type: 'caseTable', dataContext: contextName }
+    });
+    log('Opened differentness table: ' + JSON.stringify(result));
+}
+
+// ============================================
+// Word Sampler Table (1000 words for Collector)
+// ============================================
+
+async function createWordSamplerTable(slot, candidates) {
+    if (!codapConnected) {
+        log('CODAP not connected - cannot create word sampler');
+        return null;
+    }
+    
+    var contextName = WORD_SAMPLER_PREFIX + slot.name.replace(/\s+/g, '_');
+    
+    // Calculate word counts for 1000 total items
+    var totalItems = 1000;
+    var wordCounts = [];
+    var sumCounts = 0;
+    
+    // First pass: calculate raw counts
+    candidates.forEach(function(c) {
+        var count = Math.round(c.probability * totalItems);
+        wordCounts.push({ word: c.word, count: count, probability: c.probability });
+        sumCounts += count;
+    });
+    
+    // Adjust to hit exactly 1000
+    var diff = totalItems - sumCounts;
+    if (diff !== 0 && wordCounts.length > 0) {
+        // Add/subtract from the highest probability word
+        wordCounts[0].count += diff;
+    }
+    
+    // Build the items array
+    var items = [];
+    wordCounts.forEach(function(wc) {
+        for (var i = 0; i < wc.count; i++) {
+            items.push({ Word: wc.word });
+        }
+    });
+    
+    log('Creating word sampler "' + contextName + '" with ' + items.length + ' items');
+    
+    // Delete existing context if it exists
+    await codapInterface.sendRequest({
+        action: 'delete',
+        resource: 'dataContext[' + contextName + ']'
+    });
+    
+    // Create new context
+    var createResult = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext',
+        values: {
+            name: contextName,
+            title: 'Words: ' + slot.name,
+            collections: [{
+                name: 'Words',
+                title: 'Words',
+                attrs: [
+                    { name: 'Word', title: 'Word', type: 'categorical' }
+                ]
+            }]
+        }
+    });
+    
+    log('Word sampler context create result: ' + JSON.stringify(createResult));
+    
+    // Add items in batches for performance
+    var batchSize = 500;
+    for (var i = 0; i < items.length; i += batchSize) {
+        var batch = items.slice(i, i + batchSize);
+        var addResult = await codapInterface.sendRequest({
+            action: 'create',
+            resource: 'dataContext[' + contextName + '].item',
+            values: batch
+        });
+        if (i === 0) {
+            log('First batch add result: ' + JSON.stringify(addResult));
+        }
+    }
+    
+    // Do NOT create a table for this - keep it hidden
+    // The Collector will access it via the context name
+    
+    return contextName;
+}
+
+// ============================================
+// Math Functions
+// ============================================
+
+function softmaxWithTemperature(logits, temp) {
+    var n = logits.length;
+    var result = new Float32Array(n);
+    var max = -Infinity;
+    
+    for (var i = 0; i < n; i++) {
+        var scaled = logits[i] / temp;
+        if (scaled > max) max = scaled;
+    }
+    
+    var sum = 0;
+    for (var i = 0; i < n; i++) {
+        result[i] = Math.exp(logits[i] / temp - max);
+        sum += result[i];
+    }
+    
+    for (var i = 0; i < n; i++) {
+        result[i] /= sum;
+    }
+    
+    return result;
+}
+
+function sampleFromTopK(candidates, temp) {
+    if (candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+    
+    // Apply temperature to the probabilities
+    var logProbs = candidates.map(function(c) {
+        return Math.log(c.probability + 1e-10);
+    });
+    
+    var probs = softmaxWithTemperature(new Float32Array(logProbs), temp);
+    
+    // Sample
+    var r = Math.random();
+    var cumulative = 0;
+    for (var i = 0; i < probs.length; i++) {
+        cumulative += probs[i];
+        if (r < cumulative) {
+            return candidates[i];
+        }
+    }
+    
+    return candidates[candidates.length - 1];
+}
+
+// ============================================
+// Model Loading
+// ============================================
+
+async function loadModel() {
+    modelStatusEl.textContent = '⏳ Loading model libraries...';
+    modelStatusEl.className = 'status-bar status-loading';
+    progressFill.style.width = '5%';
+    
+    try {
+        // Dynamic import of transformers.js
+        log('Importing transformers.js...');
+        var { AutoModelForCausalLM, AutoTokenizer } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1');
+        
+        progressFill.style.width = '15%';
+        modelStatusEl.textContent = '⏳ Loading tokenizer...';
+        
+        log('Loading tokenizer for ' + MODEL_ID);
+        tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID);
+        
+        progressFill.style.width = '25%';
+        modelStatusEl.textContent = '⏳ Loading model (this may take a minute)...';
+        
+        log('Loading model...');
+        model = await AutoModelForCausalLM.from_pretrained(MODEL_ID, {
+            dtype: 'q4',
+            progress_callback: function(progress) {
+                if (progress.status === 'progress') {
+                    var pct = 25 + (progress.progress * 0.7);
+                    progressFill.style.width = pct + '%';
+                }
+            }
+        });
+        
+        progressFill.style.width = '100%';
+        modelStatusEl.textContent = '✅ Model ready!';
+        modelStatusEl.className = 'status-bar status-ready';
+        
+        setTimeout(function() {
+            progressBar.classList.add('hidden');
+        }, 1000);
+        
+        log('Model loaded successfully');
+        
+        // Enable buttons
+        updateButtonStates();
+        
+    } catch (error) {
+        log('Error loading model: ' + error.message);
+        console.error(error);
+        modelStatusEl.textContent = '❌ Error loading model: ' + error.message;
+        modelStatusEl.className = 'status-bar status-error';
+    }
+}
+
+// ============================================
+// Template Parsing
+// ============================================
+
+function parseTemplate() {
+    templateText = templateInput.value;
+    slots = [];
+    
+    var regex = /\[([^\]]+)\]/g;
+    var match;
+    
+    while ((match = regex.exec(templateText)) !== null) {
+        slots.push({
+            name: match[1],
+            startPos: match.index,
+            endPos: match.index + match[0].length,
+            word: null,
+            probability: null,
+            candidates: [],
+            samplerContextName: null,
+            diffContextName: null,
+            diffSampleCount: 0
+        });
+    }
+    
+    if (slots.length > 0) {
+        activeSlotIndex = 0;
+    } else {
+        activeSlotIndex = -1;
+    }
+    
+    renderSentence();
+    updateButtonStates();
+    updatePromptPreview();
+    
+    log('Parsed ' + slots.length + ' slots: ' + slots.map(function(s) { return s.name; }).join(', '));
+}
+
+function renderSentence() {
+    var html = '';
+    var lastEnd = 0;
+    
+    slots.forEach(function(slot, idx) {
+        // Text before this slot
+        html += '<span class="text-segment">' + escapeHtml(templateText.substring(lastEnd, slot.startPos)) + '</span>';
+        
+        // The slot itself
+        var slotClass = 'slot';
+        if (slot.word) {
+            slotClass += ' filled';
+        } else {
+            slotClass += ' empty';
+        }
+        if (idx === activeSlotIndex) {
+            slotClass += ' active';
+        }
+        
+        var slotContent = slot.word || slot.name;
+        var probBadge = '';
+        if (slot.word && slot.probability && showProbabilitiesEnabled) {
+            probBadge = '<span class="slot-prob">' + (slot.probability * 100).toFixed(1) + '%</span>';
+        } else if (slot.word && slot.probability) {
+            probBadge = '<span class="slot-prob hidden">' + (slot.probability * 100).toFixed(1) + '%</span>';
+        }
+        
+        html += '<span class="' + slotClass + '" data-slot-index="' + idx + '">' + 
+                escapeHtml(slotContent) + probBadge + '</span>';
+        
+        lastEnd = slot.endPos;
+    });
+    
+    // Remaining text
+    html += '<span class="text-segment">' + escapeHtml(templateText.substring(lastEnd)) + '</span>';
+    
+    sentenceDisplay.innerHTML = html;
+    
+    // Add click handlers for slots
+    document.querySelectorAll('.slot').forEach(function(el) {
+        el.addEventListener('click', function() {
+            var idx = parseInt(this.getAttribute('data-slot-index'));
+            if (!isNaN(idx) && idx >= 0 && idx < slots.length) {
+                activeSlotIndex = idx;
+                renderSentence();
+                updateButtonStates();
+                updatePromptPreview();
+                
+                // Show candidates if available and enabled
+                if (showCandidatesPanelEnabled && slots[idx].candidates.length > 0) {
+                    displayCandidates(slots[idx], slots[idx].candidates, '');
+                }
+            }
+        });
+    });
+    
+    updatePathScore();
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function updateButtonStates() {
+    var hasSlots = slots.length > 0;
+    var hasModel = model !== null && tokenizer !== null;
+    var hasActiveSlot = activeSlotIndex >= 0 && activeSlotIndex < slots.length;
+    var slotReady = hasActiveSlot && slots[activeSlotIndex].candidates.length > 0;
+    
+    parseBtn.disabled = !hasModel;
+    prepareSlotBtn.disabled = !hasModel || !hasActiveSlot;
+    sampleSlotBtn.disabled = !hasModel || !hasActiveSlot;
+    refreshBtn.disabled = !hasSlots || !hasActiveSlot;
+    slotSampleBtn.disabled = !hasModel || !hasActiveSlot;
+    seqSampleBtn.disabled = !hasModel || !hasSlots;
+    openProbTableBtn.disabled = !codapConnected;
+    openDiffTableBtn.disabled = !codapConnected || !hasActiveSlot || !slots[activeSlotIndex].diffContextName;
+}
+
+function updatePathScore() {
+    if (!showPathScoreEnabled) {
+        pathScoreDisplay.classList.add('hidden');
+        return;
+    }
+    
+    var filledSlots = slots.filter(function(s) { return s.word !== null; });
+    if (filledSlots.length === 0) {
+        pathScoreDisplay.classList.add('hidden');
+        return;
+    }
+    
+    var pathScore = filledSlots.reduce(function(prod, s) {
+        return prod * (s.probability || 1);
+    }, 1);
+    
+    pathScoreValue.textContent = (pathScore * 100).toFixed(4) + '%';
+    pathScoreDisplay.classList.remove('hidden');
+}
+
+// ============================================
+// Context Building
+// ============================================
+
+function buildContextForSlot(slotIndex) {
+    var context = '';
+    var lastEnd = 0;
+    
+    for (var i = 0; i <= slotIndex; i++) {
+        var slot = slots[i];
+        
+        // Add text before this slot
+        context += templateText.substring(lastEnd, slot.startPos);
+        
+        // For completed slots, add the word
+        if (i < slotIndex && slot.word) {
+            context += slot.word;
+        } else if (i < slotIndex) {
+            // Slot not filled yet - add placeholder
+            context += slot.word || '';
+        }
+        // For the target slot, we stop here (the model will complete it)
+        
+        lastEnd = slot.endPos;
+    }
+    
+    // Clean up the context
+    context = context.trim();
+    
+    return context;
+}
+
+function getRestOfTemplate(slotIndex) {
+    // Get template text after the current slot, with remaining slots shown as placeholders
+    var slot = slots[slotIndex];
+    var rest = '';
+    var lastEnd = slot.endPos;
+
+    for (var i = slotIndex + 1; i < slots.length; i++) {
+        var nextSlot = slots[i];
+        // Add text between slots
+        rest += templateText.substring(lastEnd, nextSlot.startPos);
+        // Add the slot placeholder (or filled word if already completed)
+        rest += nextSlot.word || '[' + nextSlot.name + ']';
+        lastEnd = nextSlot.endPos;
+    }
+
+    // Add any remaining text after the last slot
+    if (lastEnd < templateText.length) {
+        rest += templateText.substring(lastEnd);
+    }
+
+    return rest;
+}
+
+function getFullTemplateWithPlaceholders() {
+    // Get the full template with all slots shown as [SlotName] placeholders
+    var result = '';
+    var lastEnd = 0;
+
+    for (var i = 0; i < slots.length; i++) {
+        var slot = slots[i];
+        // Add text before this slot
+        result += templateText.substring(lastEnd, slot.startPos);
+        // Add slot as placeholder
+        result += '[' + slot.name + ']';
+        lastEnd = slot.endPos;
+    }
+
+    // Add any remaining text after the last slot
+    if (lastEnd < templateText.length) {
+        result += templateText.substring(lastEnd);
+    }
+
+    return result;
+}
+
+function buildFullPrompt(slotIndex) {
+    var context = buildContextForSlot(slotIndex);
+    var slot = slots[slotIndex];
+    var prefixTemplate = systemPrefix ? systemPrefix.value : '';
+    var suffixTemplate = contextSuffix ? contextSuffix.value : '';
+    var addSpace = addSpaceBeforeSlot ? addSpaceBeforeSlot.checked : true;
+    var useChatFormat = useChat ? useChat.checked : true;
+    var includeRest = includeRestOfTemplate ? includeRestOfTemplate.checked : false;
+
+    // Replace [SLOT] placeholder with actual slot name
+    var prefix = prefixTemplate.replace(/\[SLOT\]/gi, '[' + slot.name + ']');
+    var suffix = suffixTemplate.replace(/\[SLOT\]/gi, '[' + slot.name + ']');
+
+    // If including rest of template, build full template as context hint
+    var contextHint = '';
+    if (includeRest) {
+        var fullTemplate = getFullTemplateWithPlaceholders();
+        contextHint = 'Complete the sentence. Full template: "' + fullTemplate + '"\n\nNow continue with the next word for [' + slot.name + ']:\n\n';
+    }
+
+    var fullPrompt;
+
+    if (useChatFormat) {
+        // Build as a chat-style prompt
+        var userMessage = '';
+        if (prefix) {
+            userMessage = prefix + '\n\n';
+        }
+        // Add context hint (full template) before the completion context
+        if (contextHint) {
+            userMessage += contextHint;
+        }
+        userMessage += context;
+        if (suffix) {
+            userMessage += suffix;
+        }
+        if (addSpace && !userMessage.endsWith(' ')) {
+            userMessage += ' ';
+        }
+
+        // For instruct models, we simulate chat format
+        fullPrompt = '<|im_start|>user\n' + userMessage + '<|im_end|>\n<|im_start|>assistant\n';
+    } else {
+        // Plain completion mode
+        fullPrompt = '';
+        if (prefix) {
+            fullPrompt = prefix + '\n\n';
+        }
+        // Add context hint (full template) before the completion context
+        if (contextHint) {
+            fullPrompt += contextHint;
+        }
+        fullPrompt += context;
+        if (suffix) {
+            fullPrompt += suffix;
+        }
+        if (addSpace && !fullPrompt.endsWith(' ')) {
+            fullPrompt += ' ';
+        }
+    }
+    
+    return {
+        fullPrompt: fullPrompt,
+        context: context,
+        prefix: prefix,
+        prefixTemplate: prefixTemplate,
+        suffix: suffix,
+        suffixTemplate: suffixTemplate
+    };
+}
+
+function updatePromptPreview() {
+    if (!promptPreview) return;
+    if (activeSlotIndex < 0 || activeSlotIndex >= slots.length) {
+        promptPreview.innerHTML = 'Parse a template and select a slot to see the prompt';
+        return;
+    }
+    
+    var parts = buildFullPrompt(activeSlotIndex);
+    var slot = slots[activeSlotIndex];
+    
+    // Build highlighted preview
+    var html = '';
+    
+    if (useChat && useChat.checked) {
+        html += '<span style="color:#569cd6">&lt;|im_start|&gt;user</span>\n';
+    }
+    
+    if (parts.prefix) {
+        // Show the resolved prefix (with actual slot name)
+        html += '<span class="highlight-prefix">' + escapeHtml(parts.prefix) + '</span>\n\n';
+    }
+    
+    html += '<span class="highlight-context">' + escapeHtml(parts.context) + '</span>';
+    
+    if (parts.suffix) {
+        html += '<span class="highlight-suffix">' + escapeHtml(parts.suffix) + '</span>';
+    }
+    
+    html += '<span class="highlight-slot">[→ ' + slot.name + '?]</span>';
+    
+    if (useChat && useChat.checked) {
+        html += '\n<span style="color:#569cd6">&lt;|im_end|&gt;\n&lt;|im_start|&gt;assistant</span>\n';
+    }
+    
+    promptPreview.innerHTML = html;
+}
+
+function buildFullSentence() {
+    var sentence = '';
+    var lastEnd = 0;
+    
+    slots.forEach(function(slot) {
+        sentence += templateText.substring(lastEnd, slot.startPos);
+        sentence += slot.word || '[' + slot.name + ']';
+        lastEnd = slot.endPos;
+    });
+    
+    sentence += templateText.substring(lastEnd);
+    return sentence;
+}
+
+// ============================================
+// Get Word Candidates from Model
+// ============================================
+
+async function getWordCandidates(context, k, slotIndex) {
+    if (!model || !tokenizer) {
+        throw new Error('Model not loaded');
+    }
+    
+    var promptData = buildFullPrompt(slotIndex);
+    var fullPrompt = promptData.fullPrompt;
+    
+    log('Getting candidates for: "' + fullPrompt.slice(-50) + '..."');
+    
+    // Update last model input display
+    if (lastModelInput) {
+        lastModelInput.textContent = fullPrompt;
+    }
+    
+    // Tokenize
+    var inputs = await tokenizer(fullPrompt, { return_tensors: 'pt' });
+    
+    // Get model output
+    var output = await model.forward(inputs);
+    var logits = output.logits;
+    
+    // Get last token logits
+    var lastLogits = logits.data.slice(-tokenizer.model.vocab.length);
+    
+    // Apply softmax to get probabilities
+    var probs = softmaxWithTemperature(new Float32Array(lastLogits), 1.0);
+    
+    // Find top-k
+    var indexed = [];
+    for (var i = 0; i < probs.length; i++) {
+        indexed.push({ prob: probs[i], index: i });
+    }
+    indexed.sort(function(a, b) { return b.prob - a.prob; });
+    
+    var candidates = [];
+    var seenWords = new Set();
+    
+    for (var i = 0; i < indexed.length && candidates.length < k; i++) {
+        var tokenId = indexed[i].index;
+        var prob = indexed[i].prob;
+        
+        // Decode token
+        var word = tokenizer.decode([tokenId], { skip_special_tokens: true }).trim();
+        
+        // Filter: must be a real word, not empty, not special
+        if (word.length > 0 && 
+            !word.startsWith('<') && 
+            !word.startsWith('▁') &&
+            /^[a-zA-Z]/.test(word) &&
+            !seenWords.has(word.toLowerCase())) {
+            
+            // Clean up the word
+            word = word.replace(/^▁/, '').replace(/^Ġ/, '');
+            
+            if (word.length > 0 && !seenWords.has(word.toLowerCase())) {
+                seenWords.add(word.toLowerCase());
+                candidates.push({
+                    word: word,
+                    probability: prob,
+                    tokenId: tokenId
+                });
+            }
+        }
+    }
+    
+    // Renormalize probabilities
+    var totalProb = candidates.reduce(function(sum, c) { return sum + c.probability; }, 0);
+    candidates.forEach(function(c) {
+        c.probability = c.probability / totalProb;
+    });
+    
+    log('Found ' + candidates.length + ' candidates: ' + candidates.slice(0, 3).map(function(c) { 
+        return c.word + '(' + (c.probability * 100).toFixed(1) + '%)'; 
+    }).join(', '));
+    
+    return candidates;
+}
+
+// ============================================
+// Sampler Status Display
+// ============================================
+
+function showSamplerStatus(slot, contextName) {
+    samplerStatusText.textContent = 'Ready to sample [' + slot.name + ']!';
+    samplerStatusHint.innerHTML = 'Open the <strong>Sampler</strong> plugin, switch to <strong>Collector</strong> mode, ' +
+        'and select "<strong>' + contextName.replace(/_/g, ' ') + '</strong>" to sample words.';
+    samplerStatus.classList.add('visible');
+}
+
+function hideSamplerStatus() {
+    samplerStatus.classList.remove('visible');
+}
+
+// ============================================
+// Prepare Slot (main action - creates word sampler)
+// ============================================
+
+async function prepareSlot() {
+    if (activeSlotIndex < 0 || activeSlotIndex >= slots.length) return;
+    
+    var slot = slots[activeSlotIndex];
+    var context = buildContextForSlot(activeSlotIndex);
+    
+    log('Preparing slot [' + slot.name + ']');
+    log('Context: "' + context + '"');
+    
+    // Update prompt preview
+    updatePromptPreview();
+    
+    prepareSlotBtn.disabled = true;
+    prepareSlotBtn.textContent = '⏳ Loading...';
+    
+    try {
+        var candidates = await getWordCandidates(context, topK, activeSlotIndex);
+        slot.candidates = candidates;
+        
+        log('Got ' + candidates.length + ' candidates');
+        
+        if (candidates.length === 0) {
+            log('WARNING: No valid word candidates found!');
+            modelStatusEl.textContent = '⚠️ No candidates - try adjusting the prompt';
+            modelStatusEl.className = 'status-bar status-error';
+            prepareSlotBtn.disabled = false;
+            prepareSlotBtn.textContent = '🎰 Prepare Slot';
+            return;
+        }
+        
+        // Create the word sampler table for Collector
+        var contextName = await createWordSamplerTable(slot, candidates);
+        slot.samplerContextName = contextName;
+        
+        // Create the differentness tracker table
+        await createDifferentnessTracker(slot, candidates);
+        
+        // Show sampler ready status
+        if (contextName) {
+            showSamplerStatus(slot, contextName);
+        }
+        
+        // Display candidates panel only if reveal mode is enabled
+        if (showCandidatesPanelEnabled) {
+            displayCandidates(slot, candidates, context);
+        }
+        
+        // Send to probability distribution table (for reveal mode)
+        await sendDistributionToCODAP(slot, candidates, context);
+        
+        updateButtonStates();
+        
+        modelStatusEl.textContent = '✅ Slot ready! Use the Sampler to draw words.';
+        modelStatusEl.className = 'status-bar status-ready';
+        
+    } catch (error) {
+        log('Error: ' + error.message);
+        console.error(error);
+        modelStatusEl.textContent = '❌ Error: ' + error.message;
+        modelStatusEl.className = 'status-bar status-error';
+    }
+    
+    prepareSlotBtn.disabled = false;
+    prepareSlotBtn.textContent = '🎰 Prepare Slot';
+}
+
+function displayCandidates(slot, candidates, context) {
+    candidatesTitle.textContent = 'Candidates for [' + slot.name + ']';
+    candidatesList.innerHTML = '';
+    
+    var maxProb = candidates.length > 0 ? candidates[0].probability : 1;
+    
+    candidates.forEach(function(candidate, idx) {
+        var item = document.createElement('div');
+        item.className = 'candidate-item slide-in';
+        item.style.animationDelay = (idx * 0.05) + 's';
+        
+        var barWidth = (candidate.probability / maxProb) * 100;
+        
+        item.innerHTML = 
+            '<span class="candidate-rank">#' + (idx + 1) + '</span>' +
+            '<span class="candidate-word">' + escapeHtml(candidate.word) + '</span>' +
+            '<div class="candidate-bar-container"><div class="candidate-bar" style="width: ' + barWidth + '%"></div></div>' +
+            '<span class="candidate-prob">' + (candidate.probability * 100).toFixed(1) + '%</span>';
+        
+        item.addEventListener('click', function() {
+            selectCandidate(candidate);
+        });
+        
+        candidatesList.appendChild(item);
+    });
+    
+    candidatesPanel.classList.add('visible');
+}
+
+function selectCandidate(candidate) {
+    var slot = slots[activeSlotIndex];
+    slot.word = candidate.word;
+    slot.probability = candidate.probability;
+    
+    log('Selected "' + candidate.word + '" for [' + slot.name + ']');
+    
+    // Add to differentness tracker
+    addToDifferentnessTracker(slot, candidate.word);
+    
+    // Clear downstream slots
+    for (var i = activeSlotIndex + 1; i < slots.length; i++) {
+        slots[i].word = null;
+        slots[i].probability = null;
+        slots[i].candidates = [];
+        slots[i].samplerContextName = null;
+    }
+    
+    // Move to next slot if available
+    if (activeSlotIndex < slots.length - 1) {
+        activeSlotIndex++;
+    }
+    
+    renderSentence();
+    candidatesPanel.classList.remove('visible');
+    hideSamplerStatus();
+    updateButtonStates();
+    
+    // Send the completed sentence if all slots are filled
+    if (slots.every(s => s.word !== null)) {
+        sendCompletedSentenceToCODAP('Manual');
+    }
+}
+
+// ============================================
+// Sampling Functions (Direct, bypassing Sampler)
+// ============================================
+
+async function sampleSlot() {
+    if (activeSlotIndex < 0) return;
+    
+    var slot = slots[activeSlotIndex];
+    
+    if (slot.candidates.length === 0) {
+        await prepareSlot();
+    }
+    
+    if (slot.candidates.length === 0) {
+        log('No candidates available');
+        return;
+    }
+    
+    var sampled = sampleFromTopK(slot.candidates, temperature);
+    selectCandidate(sampled);
+}
+
+async function runSlotSampling() {
+    if (activeSlotIndex < 0) return;
+    
+    var n = parseInt(slotSampleN.value) || 20;
+    var slot = slots[activeSlotIndex];
+    var context = buildContextForSlot(activeSlotIndex);
+    
+    log('Running ' + n + ' slot-level samples for [' + slot.name + ']');
+    
+    slotSampleBtn.disabled = true;
+    slotSampleBtn.textContent = '⏳ Sampling...';
+    
+    try {
+        // Get fresh candidates if needed
+        if (slot.candidates.length === 0) {
+            var candidates = await getWordCandidates(context, topK, activeSlotIndex);
+            slot.candidates = candidates;
+            
+            // Create differentness tracker if not exists
+            if (!slot.diffContextName) {
+                await createDifferentnessTracker(slot, candidates);
+            }
+        }
+        
+        // Sample n times
+        var samples = [];
+        for (var i = 0; i < n; i++) {
+            var sampled = sampleFromTopK(slot.candidates, temperature);
+            samples.push(sampled);
+            
+            // Add each sample to the differentness tracker
+            await addToDifferentnessTracker(slot, sampled.word);
+        }
+        
+        // Send samples to CODAP as individual runs
+        if (codapConnected) {
+            for (var i = 0; i < samples.length; i++) {
+                runCounter++;
+                var sample = samples[i];
+                
+                // Create a temporary full sentence with this sample
+                var tempWord = slot.word;
+                var tempProb = slot.probability;
+                slot.word = sample.word;
+                slot.probability = sample.probability;
+                
+                var sentence = buildFullSentence();
+                
+                slot.word = tempWord;
+                slot.probability = tempProb;
+                
+                var result = await codapInterface.sendRequest({
+                    action: 'create',
+                    resource: 'dataContext[' + DATA_CONTEXT_NAME + '].item',
+                    values: [{
+                        Run_ID: 'Run_' + runCounter,
+                        Sample_Type: 'Slot-Sample',
+                        Template: templateText,
+                        Full_Sentence: sentence,
+                        Slot_Name: slot.name,
+                        Word_Chosen: sample.word,
+                        Word_Probability: sample.probability,
+                        Path_Score: sample.probability,
+                        Temperature: temperature
+                    }]
+                });
+                
+                if (i === 0) {
+                    log('First sample send result: ' + JSON.stringify(result));
+                }
+            }
+            
+            log('Sent ' + n + ' slot samples to CODAP');
+        } else {
+            log('CODAP not connected - samples not sent');
+        }
+        
+    } catch (error) {
+        log('Slot sampling error: ' + error.message);
+        console.error(error);
+    }
+    
+    slotSampleBtn.disabled = false;
+    slotSampleBtn.textContent = 'Run N Samples';
+    updateButtonStates();
+}
+
+async function runSequenceSampling() {
+    var n = parseInt(seqSampleN.value) || 10;
+    
+    log('Running ' + n + ' sequence-level samples');
+    
+    seqSampleBtn.disabled = true;
+    seqSampleBtn.textContent = '⏳ Generating...';
+    
+    try {
+        for (var run = 0; run < n; run++) {
+            runCounter++;
+            
+            // Reset all slots
+            slots.forEach(function(slot) {
+                slot.word = null;
+                slot.probability = null;
+                slot.candidates = [];
+            });
+            
+            // Fill each slot sequentially
+            for (var i = 0; i < slots.length; i++) {
+                var slot = slots[i];
+                var context = buildContextForSlot(i);
+                
+                var candidates = await getWordCandidates(context, topK, i);
+                var sampled = sampleFromTopK(candidates, temperature);
+                
+                slot.word = sampled.word;
+                slot.probability = sampled.probability;
+            }
+            
+            var fullSentence = buildFullSentence();
+            var pathScore = slots.reduce((prod, s) => prod * s.probability, 1);
+            
+            // Send flat data - one row per slot
+            if (codapConnected) {
+                var items = slots.map(function(slot) {
+                    return {
+                        Run_ID: 'Run_' + runCounter,
+                        Sample_Type: 'Sequence-Sample',
+                        Template: templateText,
+                        Full_Sentence: fullSentence,
+                        Slot_Name: slot.name,
+                        Word_Chosen: slot.word,
+                        Word_Probability: slot.probability,
+                        Path_Score: pathScore,
+                        Temperature: temperature
+                    };
+                });
+                
+                var result = await codapInterface.sendRequest({
+                    action: 'create',
+                    resource: 'dataContext[' + DATA_CONTEXT_NAME + '].item',
+                    values: items
+                });
+                
+                if (run === 0) {
+                    log('First sequence send result: ' + JSON.stringify(result));
+                }
+            }
+            
+            log('Generated run ' + (run + 1) + '/' + n + ': ' + fullSentence);
+            
+            // Update progress
+            seqSampleBtn.textContent = '⏳ ' + (run + 1) + '/' + n;
+        }
+        
+        // Reset and render
+        slots.forEach(function(slot) {
+            slot.word = null;
+            slot.probability = null;
+            slot.candidates = [];
+        });
+        activeSlotIndex = 0;
+        renderSentence();
+        
+        log('Sequence sampling complete!');
+        
+    } catch (error) {
+        log('Sequence sampling error: ' + error.message);
+        console.error(error);
+    }
+    
+    seqSampleBtn.disabled = false;
+    seqSampleBtn.textContent = 'Generate N Sentences';
+    updateButtonStates();
+}
+
+// ============================================
+// CODAP Data Sending
+// ============================================
+
+async function sendDistributionToCODAP(slot, candidates, context) {
+    if (!codapConnected) {
+        log('CODAP not connected - skipping distribution send');
+        return;
+    }
+    
+    queryCounter++;
+    log('Sending distribution Q' + queryCounter + ' to CODAP (' + candidates.length + ' candidates)');
+    
+    var items = candidates.map(function(c, idx) {
+        return {
+            Query_ID: 'Q' + queryCounter,
+            Slot_Name: slot.name,
+            Rank: idx + 1,
+            Word: c.word,
+            Probability: c.probability,
+            Percentage: c.probability * 100,
+            Temperature: temperature
+        };
+    });
+    
+    log('Items to send: ' + JSON.stringify(items.slice(0, 2)) + '...');
+    
+    var result = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext[' + DIST_CONTEXT_NAME + '].item',
+        values: items
+    });
+    
+    log('Distribution send result: ' + JSON.stringify(result));
+}
+
+async function sendCompletedSentenceToCODAP(sampleType) {
+    if (!codapConnected) {
+        log('CODAP not connected - skipping sentence send');
+        return;
+    }
+    
+    runCounter++;
+    
+    var fullSentence = buildFullSentence();
+    var pathScore = slots.reduce((prod, s) => prod * (s.probability || 1), 1);
+    
+    log('Sending completed sentence Run_' + runCounter + ' to CODAP');
+    
+    // Create one row per slot (flat structure)
+    var items = slots.map(function(slot, idx) {
+        return {
+            Run_ID: 'Run_' + runCounter,
+            Sample_Type: sampleType,
+            Template: templateText,
+            Full_Sentence: fullSentence,
+            Slot_Name: slot.name,
+            Word_Chosen: slot.word,
+            Word_Probability: slot.probability,
+            Path_Score: pathScore,
+            Temperature: temperature
+        };
+    });
+    
+    log('Items to send: ' + JSON.stringify(items[0]));
+    
+    var result = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext[' + DATA_CONTEXT_NAME + '].item',
+        values: items
+    });
+    
+    log('Sentence send result: ' + JSON.stringify(result));
+}
+
+// ============================================
+// Refresh Downstream Slots
+// ============================================
+
+function refreshDownstream() {
+    for (var i = activeSlotIndex; i < slots.length; i++) {
+        slots[i].word = null;
+        slots[i].probability = null;
+        slots[i].candidates = [];
+        slots[i].samplerContextName = null;
+    }
+    
+    renderSentence();
+    candidatesPanel.classList.remove('visible');
+    hideSamplerStatus();
+    updateButtonStates();
+    
+    log('Refreshed slots from [' + slots[activeSlotIndex].name + '] onward');
+}
+
+// ============================================
+// Reset
+// ============================================
+
+function resetAll() {
+    slots.forEach(function(slot) {
+        slot.word = null;
+        slot.probability = null;
+        slot.candidates = [];
+        slot.samplerContextName = null;
+        slot.diffContextName = null;
+        slot.diffSampleCount = 0;
+    });
+    
+    activeSlotIndex = slots.length > 0 ? 0 : -1;
+    
+    renderSentence();
+    candidatesPanel.classList.remove('visible');
+    hideSamplerStatus();
+    updateButtonStates();
+    
+    log('Reset all slots');
+}
+
+// ============================================
+// Reveal Mode Handlers
+// ============================================
+
+function toggleProbabilities() {
+    showProbabilitiesEnabled = showProbabilities.checked;
+    renderSentence();
+}
+
+function toggleCandidatesPanel() {
+    showCandidatesPanelEnabled = showCandidatesPanelCheckbox.checked;
+    
+    if (showCandidatesPanelEnabled && activeSlotIndex >= 0 && slots[activeSlotIndex].candidates.length > 0) {
+        displayCandidates(slots[activeSlotIndex], slots[activeSlotIndex].candidates, '');
+    } else if (!showCandidatesPanelEnabled) {
+        candidatesPanel.classList.remove('visible');
+    }
+}
+
+function togglePathScore() {
+    showPathScoreEnabled = showPathScore.checked;
+    updatePathScore();
+}
+
+async function openProbabilityTable() {
+    if (!codapConnected) return;
+    
+    var result = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'component',
+        values: { type: 'caseTable', dataContext: DIST_CONTEXT_NAME }
+    });
+    log('Opened probability table: ' + JSON.stringify(result));
+}
+
+// ============================================
+// Initialization
+// ============================================
+
+async function initCODAP() {
+    log('Initializing CODAP connection...');
+    
+    var result = await codapInterface.init({
+        name: 'StatisticalMadLibs',
+        title: 'Statistical Mad Libs',
+        version: '2.1',
+        dimensions: { width: 450, height: 780 }
+    });
+    
+    if (result && result.success) {
+        codapConnected = true;
+        codapDot.classList.add('connected');
+        codapStatus.textContent = 'Connected to CODAP';
+        await createDataContext();
+    } else {
+        log('Not connected - standalone mode');
+        codapStatus.textContent = 'Standalone mode';
+    }
+    
+    loadModel();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    log('DOM ready');
+    initDOMRefs();
+    
+    // Event listeners
+    parseBtn.addEventListener('click', parseTemplate);
+    prepareSlotBtn.addEventListener('click', prepareSlot);
+    sampleSlotBtn.addEventListener('click', sampleSlot);
+    refreshBtn.addEventListener('click', refreshDownstream);
+    resetBtn.addEventListener('click', resetAll);
+    closeCandidates.addEventListener('click', function() {
+        candidatesPanel.classList.remove('visible');
+    });
+    slotSampleBtn.addEventListener('click', runSlotSampling);
+    seqSampleBtn.addEventListener('click', runSequenceSampling);
+    
+    // Reveal mode listeners
+    showProbabilities.addEventListener('change', toggleProbabilities);
+    showCandidatesPanelCheckbox.addEventListener('change', toggleCandidatesPanel);
+    showPathScore.addEventListener('change', togglePathScore);
+    openProbTableBtn.addEventListener('click', openProbabilityTable);
+    openDiffTableBtn.addEventListener('click', openDifferentnessTable);
+    
+    // Slider listeners
+    tempSlider.addEventListener('input', function() {
+        temperature = parseFloat(this.value);
+        tempValue.textContent = temperature.toFixed(2);
+        
+        // Update CODAP global if connected
+        if (codapConnected) {
+            codapInterface.sendRequest({
+                action: 'update',
+                resource: 'global[Temperature]',
+                values: { value: temperature }
+            });
+        }
+    });
+    
+    topKSlider.addEventListener('input', function() {
+        topK = parseInt(this.value);
+        topKValue.textContent = topK;
+        
+        if (codapConnected) {
+            codapInterface.sendRequest({
+                action: 'update',
+                resource: 'global[TopK]',
+                values: { value: topK }
+            });
+        }
+    });
+    
+    // Prompt engineering listeners
+    var PROMPT_PRESETS = {
+        'completion': {
+            prefix: 'Fill in [SLOT] with one word.',
+            suffix: '',
+            useChat: true,
+            addSpace: true
+        },
+        'fill-blank': {
+            prefix: 'Fill in the blank [SLOT] with the most appropriate single word.',
+            suffix: '',
+            useChat: true,
+            addSpace: false,
+            includeRest: true
+        },
+        'story': {
+            prefix: 'Continue this story. The next word should be a [SLOT]. Reply with only that word.',
+            suffix: '',
+            useChat: true,
+            addSpace: true
+        },
+        'minimal': {
+            prefix: '',
+            suffix: '',
+            useChat: false,
+            addSpace: true
+        },
+        'custom': null
+    };
+    
+    promptPreset.addEventListener('change', function() {
+        var preset = PROMPT_PRESETS[this.value];
+        if (preset) {
+            systemPrefix.value = preset.prefix;
+            contextSuffix.value = preset.suffix;
+            useChat.checked = preset.useChat;
+            addSpaceBeforeSlot.checked = preset.addSpace;
+            includeRestOfTemplate.checked = preset.includeRest || false;
+            updatePromptPreview();
+        }
+    });
+    
+    systemPrefix.addEventListener('input', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+    contextSuffix.addEventListener('input', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+    useChat.addEventListener('change', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+    addSpaceBeforeSlot.addEventListener('change', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+    includeRestOfTemplate.addEventListener('change', function() {
+        promptPreset.value = 'custom';
+        updatePromptPreview();
+    });
+
+    copyPromptBtn.addEventListener('click', function() {
+        if (activeSlotIndex >= 0) {
+            var promptData = buildFullPrompt(activeSlotIndex);
+            navigator.clipboard.writeText(promptData.fullPrompt).then(function() {
+                copyPromptBtn.textContent = '✓ Copied!';
+                setTimeout(function() {
+                    copyPromptBtn.textContent = '📋 Copy';
+                }, 1500);
+            });
+        }
+    });
+    
+    // Initialize
+    setTimeout(initCODAP, 100);
+});
+</script>
+</body>
+</html>
