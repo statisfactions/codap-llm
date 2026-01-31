@@ -1307,19 +1307,30 @@ async function createDataContext() {
 // ============================================
 
 /**
+ * Sanitize a word for use as a CODAP attribute name.
+ * Replaces spaces with underscores, removes special characters.
+ */
+function sanitizeAttrName(word) {
+    return word.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+}
+
+/**
  * Build CODAP formulas for tracking "differentness" dynamically based on candidates.
  * This creates formulas that work regardless of which specific words are in the distribution.
- * 
- * The key insight: for each draw, "Differentness" = 
+ *
+ * The key insight: for each draw, "Differentness" =
  *   "What fraction of all previous draws were DIFFERENT from this word?"
- * 
+ *
  * This converges to the coefficient of unalikeability as sample size grows.
+ *
+ * Also creates running percentage columns for each candidate word, allowing
+ * students to compare empirical vs theoretical distributions.
  */
 function buildDifferentnessFormulas(candidates) {
     var formulas = {};
     var numCandidates = candidates.length;
-    
-    // Create running count columns for each candidate word
+
+    // Create running count columns for each candidate word (hidden)
     candidates.forEach(function(c, idx) {
         var colName = 'Count_' + (idx + 1);
         var escapedWord = c.word.replace(/"/g, '\\"').replace(/'/g, "\\'");
@@ -1329,13 +1340,28 @@ function buildDifferentnessFormulas(candidates) {
             description: 'Running count of "' + c.word + '"'
         };
     });
-    
+
     // DrawNumber: which draw is this (1, 2, 3, ...)
     formulas['DrawNumber'] = {
         formula: 'prev(DrawNumber, 0) + 1',
         hidden: true,
         description: 'Sequential draw number'
     };
+
+    // Create running percentage columns for each candidate word (VISIBLE)
+    // This is the primary pedagogical focus - students compare these to theoretical probabilities
+    candidates.forEach(function(c, idx) {
+        var sanitizedWord = sanitizeAttrName(c.word);
+        var pctColName = 'Pct_' + sanitizedWord;
+        var countCol = 'Count_' + (idx + 1);
+        formulas[pctColName] = {
+            formula: 'if(DrawNumber > 0, round(100 * ' + countCol + ' / DrawNumber, 0), "")',
+            hidden: false,
+            description: 'Running % of draws that were "' + c.word + '"',
+            title: '% ' + c.word,
+            word: c.word  // Store original word for reference
+        };
+    });
     
     // MyCountBefore: how many times has THIS word appeared in all previous draws?
     // Build a nested if to look up the correct count column based on the word
@@ -1409,30 +1435,55 @@ async function createDifferentnessTracker(slot, candidates) {
     });
     
     // Build attribute list
+    // Column order: Draw, Word, % Word1, % Word2, ..., Differentness (%), then hidden columns
     var attrs = [
         { name: 'Draw', title: 'Draw', type: 'numeric', description: 'Draw number' },
         { name: 'Word', title: 'Word', type: 'categorical', description: 'The sampled word' }
     ];
-    
-    // Add formula-based attributes
-    var formulaOrder = ['DrawNumber', 'TotalBefore'];
-    
-    // Add count columns
-    candidates.forEach(function(c, idx) {
-        formulaOrder.push('Count_' + (idx + 1));
+
+    // Add visible percentage columns for each candidate (primary pedagogical focus)
+    candidates.forEach(function(c) {
+        var sanitizedWord = sanitizeAttrName(c.word);
+        var pctColName = 'Pct_' + sanitizedWord;
+        var f = formulas[pctColName];
+        if (f) {
+            attrs.push({
+                name: pctColName,
+                title: f.title || ('% ' + c.word),
+                type: 'numeric',
+                formula: f.formula,
+                hidden: false,
+                description: f.description
+            });
+        }
     });
-    
-    formulaOrder.push('MyCountBefore', 'DifferentBefore', 'Differentness');
-    
-    formulaOrder.forEach(function(colName) {
+
+    // Add Differentness column (visible)
+    attrs.push({
+        name: 'Differentness',
+        title: 'Differentness (%)',
+        type: 'numeric',
+        formula: formulas['Differentness'].formula,
+        hidden: false,
+        description: formulas['Differentness'].description
+    });
+
+    // Add hidden helper columns
+    var hiddenCols = ['DrawNumber', 'TotalBefore'];
+    candidates.forEach(function(c, idx) {
+        hiddenCols.push('Count_' + (idx + 1));
+    });
+    hiddenCols.push('MyCountBefore', 'DifferentBefore');
+
+    hiddenCols.forEach(function(colName) {
         var f = formulas[colName];
         if (f) {
             attrs.push({
                 name: colName,
-                title: colName === 'Differentness' ? 'Differentness (%)' : colName.replace(/_/g, ' '),
+                title: colName.replace(/_/g, ' '),
                 type: 'numeric',
                 formula: f.formula,
-                hidden: f.hidden,
+                hidden: true,
                 description: f.description
             });
         }
