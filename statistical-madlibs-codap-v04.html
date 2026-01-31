@@ -792,7 +792,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260131b</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260131d</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -1565,10 +1565,12 @@ async function openDifferentnessTable() {
 }
 
 // ============================================
-// Connect to CODAP Sampler Plugin
+// Connect to CODAP Sampler Plugin (Flat Tracking Table)
 // ============================================
 
 var SAMPLER_ITEMS_COLLECTION = 'items';
+var TRACKING_CONTEXT_NAME = 'Sampler Tracking';
+var samplerConnection = null;  // Stores connection state
 
 /**
  * Find the Sampler's data context by listing all contexts and looking for one
@@ -1589,6 +1591,9 @@ async function findSamplerContext() {
     // Look for a context that looks like Sampler output
     for (var i = 0; i < listResult.values.length; i++) {
         var ctx = listResult.values[i];
+        // Skip our own tracking context
+        if (ctx.name === TRACKING_CONTEXT_NAME) continue;
+
         // Check if it has the 'items' collection (characteristic of Sampler)
         var collResult = await codapInterface.sendRequest({
             action: 'get',
@@ -1609,9 +1614,162 @@ async function findSamplerContext() {
 }
 
 /**
- * Connect to the CODAP Sampler plugin's output and add running percentage columns.
- * This allows students to compare empirical percentages to theoretical probabilities
- * as they sample from the Sampler.
+ * Create the flat tracking table with running percentage formulas.
+ */
+async function createTrackingTable(candidates) {
+    // Delete existing tracking context if it exists
+    await codapInterface.sendRequest({
+        action: 'delete',
+        resource: 'dataContext[' + TRACKING_CONTEXT_NAME + ']'
+    });
+
+    // Build attributes: Draw, Word, then Count_X (hidden) and Pct_X (visible) for each candidate
+    var attrs = [
+        { name: 'Draw', title: 'Draw', type: 'numeric', description: 'Draw number' },
+        { name: 'Word', title: 'Word', type: 'categorical', description: 'The sampled word' }
+    ];
+
+    // Add running count (hidden) and percentage (visible) for each candidate
+    candidates.forEach(function(c) {
+        var sanitized = sanitizeAttrName(c.word);
+        var escapedWord = c.word.replace(/"/g, '\\"');
+
+        // Running count (hidden)
+        attrs.push({
+            name: 'Count_' + sanitized,
+            title: 'Count ' + c.word,
+            type: 'numeric',
+            formula: 'prev(Count_' + sanitized + ', 0) + if(Word="' + escapedWord + '", 1, 0)',
+            hidden: true,
+            description: 'Running count of "' + c.word + '"'
+        });
+
+        // Running percentage (visible)
+        attrs.push({
+            name: 'Pct_' + sanitized,
+            title: '% ' + c.word,
+            type: 'numeric',
+            formula: 'if(Draw > 0, round(100 * Count_' + sanitized + ' / Draw, 0), "")',
+            hidden: false,
+            description: 'Running % of draws that were "' + c.word + '"'
+        });
+    });
+
+    // Create the flat context
+    var createResult = await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext',
+        values: {
+            name: TRACKING_CONTEXT_NAME,
+            title: 'Sampler Tracking',
+            collections: [{
+                name: 'draws',
+                title: 'Draws',
+                attrs: attrs
+            }]
+        }
+    });
+
+    log('Created tracking table: ' + JSON.stringify(createResult));
+    return createResult.success;
+}
+
+/**
+ * Copy all existing items from Sampler to the tracking table.
+ */
+async function copyExistingItems(samplerContextName, outputAttrName) {
+    // Get all items from the Sampler
+    var itemsResult = await codapInterface.sendRequest({
+        action: 'get',
+        resource: 'dataContext[' + samplerContextName + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].allCases'
+    });
+
+    if (!itemsResult.success || !itemsResult.values || !itemsResult.values.cases) {
+        log('No existing items to copy');
+        return 0;
+    }
+
+    var cases = itemsResult.values.cases;
+    var items = [];
+
+    for (var i = 0; i < cases.length; i++) {
+        var word = cases[i].values[outputAttrName];
+        if (word) {
+            items.push({
+                Draw: items.length + 1,
+                Word: word
+            });
+        }
+    }
+
+    if (items.length === 0) {
+        return 0;
+    }
+
+    // Add all items to tracking table
+    await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'dataContext[' + TRACKING_CONTEXT_NAME + '].item',
+        values: items
+    });
+
+    log('Copied ' + items.length + ' existing items to tracking table');
+    return items.length;
+}
+
+/**
+ * Handle notifications from CODAP when new items are added to the Sampler.
+ */
+function setupSamplerListener(samplerContextName, outputAttrName) {
+    // Store connection info
+    samplerConnection = {
+        samplerContextName: samplerContextName,
+        outputAttrName: outputAttrName,
+        drawCount: 0
+    };
+
+    // Register for data context change notifications
+    codapInterface.on('notify', 'dataContextChangeNotice[' + samplerContextName + ']', async function(notice) {
+        if (!notice.values || !notice.values.operation) return;
+
+        var op = notice.values.operation;
+
+        // Handle new cases being created
+        if (op === 'createCases' && notice.values.result && notice.values.result.caseIDs) {
+            var newCaseIDs = notice.values.result.caseIDs;
+            log('Sampler added ' + newCaseIDs.length + ' new cases');
+
+            // Fetch the new cases and add to tracking table
+            for (var i = 0; i < newCaseIDs.length; i++) {
+                var caseResult = await codapInterface.sendRequest({
+                    action: 'get',
+                    resource: 'dataContext[' + samplerContextName + '].caseByID[' + newCaseIDs[i] + ']'
+                });
+
+                if (caseResult.success && caseResult.values && caseResult.values.case) {
+                    var word = caseResult.values.case.values[outputAttrName];
+                    if (word) {
+                        samplerConnection.drawCount++;
+                        await codapInterface.sendRequest({
+                            action: 'create',
+                            resource: 'dataContext[' + TRACKING_CONTEXT_NAME + '].item',
+                            values: [{
+                                Draw: samplerConnection.drawCount,
+                                Word: word
+                            }]
+                        });
+                    }
+                }
+            }
+        }
+    });
+
+    log('Listening for changes to ' + samplerContextName);
+}
+
+/**
+ * Connect to the CODAP Sampler plugin's output and create a flat tracking table
+ * with row-by-row running percentages.
  */
 async function connectToSampler() {
     if (!codapConnected) {
@@ -1626,7 +1784,6 @@ async function connectToSampler() {
     }
 
     var candidates = slots[activeSlotIndex].candidates;
-    var slot = slots[activeSlotIndex];
 
     log('Connecting to Sampler with ' + candidates.length + ' candidates');
 
@@ -1657,76 +1814,40 @@ async function connectToSampler() {
     }
     log('Using output attribute: ' + outputAttrName);
 
-    // Add running count and percentage columns for each candidate
-    var addedCount = 0;
-    for (var i = 0; i < candidates.length; i++) {
-        var word = candidates[i].word;
-        var sanitized = sanitizeAttrName(word);
-        var escapedWord = word.replace(/"/g, '\\"');
-
-        // Check if column already exists
-        var existingCheck = await codapInterface.sendRequest({
-            action: 'get',
-            resource: 'dataContext[' + samplerContextName + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute[Pct_' + sanitized + ']'
-        });
-
-        if (existingCheck.success) {
-            log('Column Pct_' + sanitized + ' already exists, skipping');
-            continue;
-        }
-
-        // Add running count column (hidden)
-        var countColName = 'Count_' + sanitized;
-        var countFormula = 'prev(' + countColName + ', 0) + if(' + outputAttrName + '="' + escapedWord + '", 1, 0)';
-
-        await codapInterface.sendRequest({
-            action: 'create',
-            resource: 'dataContext[' + samplerContextName + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute',
-            values: {
-                name: countColName,
-                title: 'Count ' + word,
-                type: 'numeric',
-                formula: countFormula,
-                hidden: true,
-                description: 'Running count of "' + word + '"'
-            }
-        });
-
-        // Add running percentage column (visible)
-        var pctColName = 'Pct_' + sanitized;
-        var pctFormula = 'if(caseIndex > 0, round(100 * ' + countColName + ' / caseIndex, 0), "")';
-
-        await codapInterface.sendRequest({
-            action: 'create',
-            resource: 'dataContext[' + samplerContextName + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute',
-            values: {
-                name: pctColName,
-                title: '% ' + word,
-                type: 'numeric',
-                formula: pctFormula,
-                hidden: false,
-                description: 'Running % of samples that were "' + word + '"'
-            }
-        });
-
-        addedCount++;
-        log('Added percentage column for "' + word + '"');
+    // Create the flat tracking table
+    var created = await createTrackingTable(candidates);
+    if (!created) {
+        alert('Failed to create tracking table.');
+        return;
     }
 
-    // Open the Sampler Data table to show the new columns
+    // Copy existing items from Sampler to tracking table
+    var copiedCount = await copyExistingItems(samplerContextName, outputAttrName);
+
+    // Store the draw count for future additions
+    if (samplerConnection) {
+        samplerConnection.drawCount = copiedCount;
+    }
+
+    // Set up listener for new items
+    setupSamplerListener(samplerContextName, outputAttrName);
+
+    // Update draw count after copying
+    if (samplerConnection) {
+        samplerConnection.drawCount = copiedCount;
+    }
+
+    // Open the tracking table
     await codapInterface.sendRequest({
         action: 'create',
         resource: 'component',
-        values: { type: 'caseTable', dataContext: samplerContextName }
+        values: { type: 'caseTable', dataContext: TRACKING_CONTEXT_NAME }
     });
 
-    if (addedCount > 0) {
-        log('Connected to Sampler: added ' + addedCount + ' percentage columns');
-        alert('Connected! Added ' + addedCount + ' running percentage columns to "' + samplerContextName + '".\n\nNow run the Sampler and watch the percentages converge to the theoretical values.');
-    } else {
-        log('All percentage columns already existed');
-        alert('Percentage columns already exist in "' + samplerContextName + '".');
-    }
+    log('Connected to Sampler with flat tracking table');
+    alert('Connected! Created "Sampler Tracking" table with row-by-row running percentages.\n\n' +
+          (copiedCount > 0 ? 'Copied ' + copiedCount + ' existing samples.\n\n' : '') +
+          'New samples from the Sampler will automatically appear with running % calculations.');
 }
 
 // ============================================
