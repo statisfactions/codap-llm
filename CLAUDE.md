@@ -36,6 +36,7 @@ User Input → Tokenization → Model Logits → Top-K Filtering → Temperature
 - `getWordCandidates(promptText, k, slotIndex)` - Main inference pipeline
 - `softmaxWithTemperature(logits, temp)` - Temperature-scaled probabilities
 - `sampleFromTopK(candidates, temp)` - Categorical sampling from top-K
+- `greedyCompleteToWord(prompt, tokenId, prob)` - Complete subword token to full word boundary
 - `sendToCODAP()` / `sendCompletedSentenceToCODAP()` - CODAP data transmission
 - `buildDifferentnessFormulas(candidates)` - Generate CODAP formulas for variability tracking (running % per word + differentness)
 - `sanitizeAttrName(word)` - Clean word for use as CODAP attribute name

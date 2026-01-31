@@ -1697,6 +1697,92 @@ function sampleFromTopK(candidates, temp) {
     return candidates[candidates.length - 1];
 }
 
+function getTopKTokens(probs, k) {
+    var topK = [];
+    for (var i = 0; i < probs.length; i++) {
+        var val = probs[i];
+        if (topK.length < k) {
+            topK.push({ tokenId: i, probability: val });
+            topK.sort(function(a, b) { return b.probability - a.probability; });
+        } else if (val > topK[k - 1].probability) {
+            topK[k - 1] = { tokenId: i, probability: val };
+            topK.sort(function(a, b) { return b.probability - a.probability; });
+        }
+    }
+    return topK;
+}
+
+async function greedyCompleteToWord(promptText, initialTokenId, initialProb) {
+    // Start with the initial token
+    var word = tokenizer.decode([initialTokenId]);
+    var currentPrompt = promptText + word;
+
+    // Skip if initial token is a special token or empty
+    if (word.includes('<|') || word.includes('|>') || !word.trim()) {
+        return { word: '', probability: initialProb };
+    }
+
+    // Keep generating until we hit a space or punctuation
+    var maxIterations = 10;
+    var iteration = 0;
+
+    while (iteration < maxIterations) {
+        // Check if the last character is a word boundary
+        var lastChar = word.slice(-1);
+        if (/[\s.,!?;:'")\]}>]/.test(lastChar) || word.endsWith('\n')) {
+            // Remove trailing space/punctuation for clean word
+            word = word.replace(/[\s.,!?;:'")\]}>]+$/, '');
+            break;
+        }
+
+        // Generate next token with temperature 0 (greedy)
+        var inputs = tokenizer(currentPrompt, { return_tensors: 'pt' });
+        var output = await model.forward(inputs);
+
+        var logitsData = output.logits.data;
+        var vocabSize = output.logits.dims[2];
+        var seqLen = inputs.input_ids.data.length;
+        var lastLogits = logitsData.slice((seqLen - 1) * vocabSize, seqLen * vocabSize);
+
+        // Find argmax (greedy)
+        var maxIdx = 0;
+        var maxVal = lastLogits[0];
+        for (var i = 1; i < lastLogits.length; i++) {
+            if (lastLogits[i] > maxVal) {
+                maxVal = lastLogits[i];
+                maxIdx = i;
+            }
+        }
+
+        var nextToken = tokenizer.decode([maxIdx]);
+
+        // Stop on special tokens
+        if (nextToken.includes('<|') || nextToken.includes('|>')) {
+            break;
+        }
+
+        // Check if next token starts with space or is punctuation
+        if (/^[\s.,!?;:'")\]}>]/.test(nextToken)) {
+            break;
+        }
+
+        word += nextToken;
+        currentPrompt += nextToken;
+        iteration++;
+    }
+
+    // Clean up the word - remove special characters but keep the core word
+    word = word.trim()
+        .replace(/^[.,!?;:'"()\[\]{}<>]+/, '')
+        .replace(/[.,!?;:'"()\[\]{}<>]+$/, '')
+        .replace(/<\|.*?\|>/g, ''); // Remove any special tokens
+
+    return {
+        word: word,
+        probability: initialProb
+    };
+}
+
 // ============================================
 // Model Loading
 // ============================================
@@ -2098,79 +2184,53 @@ async function getWordCandidates(context, k, slotIndex) {
     if (!model || !tokenizer) {
         throw new Error('Model not loaded');
     }
-    
-    var promptData = buildFullPrompt(slotIndex);
+
+    // Build the full prompt with prefix/suffix
+    var promptData = buildFullPrompt(slotIndex !== undefined ? slotIndex : activeSlotIndex);
     var fullPrompt = promptData.fullPrompt;
-    
-    log('Getting candidates for: "' + fullPrompt.slice(-50) + '..."');
-    
-    // Update last model input display
+
+    // Update the last model input display
     if (lastModelInput) {
         lastModelInput.textContent = fullPrompt;
     }
-    
-    // Tokenize
-    var inputs = await tokenizer(fullPrompt, { return_tensors: 'pt' });
-    
-    // Get model output
+
+    log('Getting candidates for prompt (' + fullPrompt.length + ' chars)');
+
+    var inputs = tokenizer(fullPrompt, { return_tensors: 'pt' });
     var output = await model.forward(inputs);
-    var logits = output.logits;
-    
-    // Get last token logits
-    var lastLogits = logits.data.slice(-tokenizer.model.vocab.length);
-    
-    // Apply softmax to get probabilities
-    var probs = softmaxWithTemperature(new Float32Array(lastLogits), 1.0);
-    
-    // Find top-k
-    var indexed = [];
-    for (var i = 0; i < probs.length; i++) {
-        indexed.push({ prob: probs[i], index: i });
-    }
-    indexed.sort(function(a, b) { return b.prob - a.prob; });
-    
-    var candidates = [];
+
+    var logitsData = output.logits.data;
+    var vocabSize = output.logits.dims[2];
+    var seqLen = inputs.input_ids.data.length;
+    var lastLogits = logitsData.slice((seqLen - 1) * vocabSize, seqLen * vocabSize);
+
+    var probs = softmaxWithTemperature(lastLogits, 1.0);
+    var topTokens = getTopKTokens(probs, k * 3); // Get more to account for duplicates after completion
+
+    // Greedy-complete each token to a full word
+    var wordCandidates = [];
     var seenWords = new Set();
-    
-    for (var i = 0; i < indexed.length && candidates.length < k; i++) {
-        var tokenId = indexed[i].index;
-        var prob = indexed[i].prob;
-        
-        // Decode token
-        var word = tokenizer.decode([tokenId], { skip_special_tokens: true }).trim();
-        
-        // Filter: must be a real word, not empty, not special
-        if (word.length > 0 && 
-            !word.startsWith('<') && 
-            !word.startsWith('▁') &&
-            /^[a-zA-Z]/.test(word) &&
-            !seenWords.has(word.toLowerCase())) {
-            
-            // Clean up the word
-            word = word.replace(/^▁/, '').replace(/^Ġ/, '');
-            
-            if (word.length > 0 && !seenWords.has(word.toLowerCase())) {
-                seenWords.add(word.toLowerCase());
-                candidates.push({
-                    word: word,
-                    probability: prob,
-                    tokenId: tokenId
-                });
-            }
+
+    for (var i = 0; i < topTokens.length && wordCandidates.length < k; i++) {
+        var token = topTokens[i];
+        var completed = await greedyCompleteToWord(fullPrompt, token.tokenId, token.probability);
+
+        var normalizedWord = completed.word.toLowerCase().trim();
+        if (normalizedWord && normalizedWord.length > 0 && !seenWords.has(normalizedWord)) {
+            seenWords.add(normalizedWord);
+            wordCandidates.push({
+                word: completed.word,
+                probability: completed.probability,
+                rank: wordCandidates.length + 1
+            });
         }
     }
-    
-    // Renormalize probabilities
-    var totalProb = candidates.reduce(function(sum, c) { return sum + c.probability; }, 0);
-    candidates.forEach(function(c) {
-        c.probability = c.probability / totalProb;
-    });
-    
-    log('Found ' + candidates.length + ' candidates: ' + candidates.slice(0, 3).map(function(c) { 
-        return c.word + '(' + (c.probability * 100).toFixed(1) + '%)'; 
+
+    log('Found ' + wordCandidates.length + ' candidates: ' + wordCandidates.slice(0, 3).map(function(c) {
+        return c.word + '(' + (c.probability * 100).toFixed(1) + '%)';
     }).join(', '));
-    
-    return candidates;
+
+    return wordCandidates;
 }
 
 // ============================================
