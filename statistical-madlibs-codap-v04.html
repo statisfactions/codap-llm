@@ -792,7 +792,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260201b</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260201d</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -1695,15 +1695,12 @@ async function copyExistingItems(samplerContextName, outputAttrName) {
     var cases = itemsResult.values.cases;
     log('Found ' + cases.length + ' cases in Sampler');
 
-    // Log first case to see its structure
-    if (cases.length > 0) {
-        log('First case values: ' + JSON.stringify(cases[0].values));
-    }
-
     var items = [];
 
     for (var i = 0; i < cases.length; i++) {
-        var word = cases[i].values[outputAttrName];
+        // CODAP allCases structure: cases[i].case.values
+        var caseValues = cases[i].case ? cases[i].case.values : cases[i].values;
+        var word = caseValues ? caseValues[outputAttrName] : null;
         if (word) {
             items.push({
                 Draw: items.length + 1,
@@ -1758,7 +1755,9 @@ async function syncNewItems(samplerContextName, outputAttrName) {
 
     // Add items beyond our current count
     for (var i = currentCount; i < cases.length; i++) {
-        var word = cases[i].values[outputAttrName];
+        // CODAP allCases structure: cases[i].case.values
+        var caseValues = cases[i].case ? cases[i].case.values : cases[i].values;
+        var word = caseValues ? caseValues[outputAttrName] : null;
         if (word) {
             newItems.push({
                 Draw: i + 1,
