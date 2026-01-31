@@ -792,7 +792,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260201a</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260201b</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -1679,17 +1679,27 @@ async function createTrackingTable(candidates) {
  */
 async function copyExistingItems(samplerContextName, outputAttrName) {
     // Get all items from the Sampler
+    log('Fetching items from ' + samplerContextName + '.items, looking for attr: ' + outputAttrName);
     var itemsResult = await codapInterface.sendRequest({
         action: 'get',
         resource: 'dataContext[' + samplerContextName + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].allCases'
     });
 
+    log('Items result: success=' + itemsResult.success + ', has values=' + !!itemsResult.values);
+
     if (!itemsResult.success || !itemsResult.values || !itemsResult.values.cases) {
-        log('No existing items to copy');
+        log('No existing items to copy (no cases array)');
         return 0;
     }
 
     var cases = itemsResult.values.cases;
+    log('Found ' + cases.length + ' cases in Sampler');
+
+    // Log first case to see its structure
+    if (cases.length > 0) {
+        log('First case values: ' + JSON.stringify(cases[0].values));
+    }
+
     var items = [];
 
     for (var i = 0; i < cases.length; i++) {
@@ -1703,6 +1713,7 @@ async function copyExistingItems(samplerContextName, outputAttrName) {
     }
 
     if (items.length === 0) {
+        log('Cases found but no matching words for attr "' + outputAttrName + '"');
         return 0;
     }
 
@@ -1722,7 +1733,12 @@ async function copyExistingItems(samplerContextName, outputAttrName) {
  * Fetches all items and adds any beyond our current drawCount.
  */
 async function syncNewItems(samplerContextName, outputAttrName) {
-    if (!samplerConnection) return;
+    if (!samplerConnection) {
+        log('syncNewItems: no samplerConnection');
+        return;
+    }
+
+    log('syncNewItems: fetching from ' + samplerContextName + ', attr=' + outputAttrName + ', currentCount=' + samplerConnection.drawCount);
 
     var itemsResult = await codapInterface.sendRequest({
         action: 'get',
@@ -1735,6 +1751,8 @@ async function syncNewItems(samplerContextName, outputAttrName) {
     }
 
     var cases = itemsResult.values.cases;
+    log('syncNewItems: found ' + cases.length + ' total cases, have ' + samplerConnection.drawCount);
+
     var currentCount = samplerConnection.drawCount;
     var newItems = [];
 
@@ -1757,6 +1775,8 @@ async function syncNewItems(samplerContextName, outputAttrName) {
             values: newItems
         });
         samplerConnection.drawCount = cases.length;
+    } else {
+        log('syncNewItems: no new items to add (word attr mismatch or no new cases)');
     }
 }
 
