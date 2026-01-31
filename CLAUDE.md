@@ -66,3 +66,16 @@ Hardcoded model IDs (change in source if needed):
 Latest versions are highest numbered. Previous versions kept for reference:
 - `statistical-madlibs-codap-v04.html` (current) - adds variability tracking
 - `token-prob-codap-v9.html` (current)
+
+## Build Tags
+
+**IMPORTANT:** When making changes to plugin files, update the build tag in the header.
+
+Format: `vXX-YYYYMMDDx` where:
+- `XX` = major version (e.g., 04)
+- `YYYYMMDD` = date (e.g., 20260131)
+- `x` = letter suffix for multiple changes per day (a, b, c...)
+
+Location in statistical-madlibs: Look for the `<h1>` tag with "Statistical Mad Libs" and update the version span.
+
+Example: `v04-20260131a` → `v04-20260131b` (next change same day) → `v04-20260201a` (next day)

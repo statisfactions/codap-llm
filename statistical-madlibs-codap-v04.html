@@ -792,7 +792,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs</h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260131a</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -924,8 +924,11 @@
                 <button class="btn btn-secondary" id="openDiffTableBtn" disabled style="padding: 6px 12px; font-size: 11px; margin-left: 8px;">
                     📈 Open Variability Table
                 </button>
+                <button class="btn btn-secondary" id="connectSamplerBtn" disabled style="padding: 6px 12px; font-size: 11px; margin-left: 8px;">
+                    🔗 Connect to Sampler
+                </button>
             </div>
-            <div class="reveal-hint">View probability distribution or variability tracking in CODAP</div>
+            <div class="reveal-hint">View probability distribution, variability tracking, or add running % to CODAP Sampler output</div>
         </div>
     </details>
     
@@ -1181,7 +1184,7 @@ var codapDot, codapStatus;
 var systemPrefix, contextSuffix, promptPreview, lastModelInput;
 var useChat, addSpaceBeforeSlot, includeRestOfTemplate, copyPromptBtn, promptPreset;
 var samplerStatus, samplerStatusText, samplerStatusHint;
-var showProbabilities, showCandidatesPanelCheckbox, showPathScore, openProbTableBtn, openDiffTableBtn;
+var showProbabilities, showCandidatesPanelCheckbox, showPathScore, openProbTableBtn, openDiffTableBtn, connectSamplerBtn;
 
 function initDOMRefs() {
     modelStatusEl = document.getElementById('modelStatus');
@@ -1227,6 +1230,7 @@ function initDOMRefs() {
     showPathScore = document.getElementById('showPathScore');
     openProbTableBtn = document.getElementById('openProbTableBtn');
     openDiffTableBtn = document.getElementById('openDiffTableBtn');
+    connectSamplerBtn = document.getElementById('connectSamplerBtn');
 }
 
 // ============================================
@@ -1558,6 +1562,137 @@ async function openDifferentnessTable() {
         values: { type: 'caseTable', dataContext: contextName }
     });
     log('Opened differentness table: ' + JSON.stringify(result));
+}
+
+// ============================================
+// Connect to CODAP Sampler Plugin
+// ============================================
+
+var SAMPLER_CONTEXT_NAME = 'Sampler Data';
+var SAMPLER_ITEMS_COLLECTION = 'items';
+
+/**
+ * Connect to the CODAP Sampler plugin's output and add running percentage columns.
+ * This allows students to compare empirical percentages to theoretical probabilities
+ * as they sample from the Sampler.
+ */
+async function connectToSampler() {
+    if (!codapConnected) {
+        log('CODAP not connected');
+        return;
+    }
+
+    if (activeSlotIndex < 0 || slots[activeSlotIndex].candidates.length === 0) {
+        log('No candidates available for current slot');
+        alert('Please prepare a slot first to get candidate words.');
+        return;
+    }
+
+    var candidates = slots[activeSlotIndex].candidates;
+    var slot = slots[activeSlotIndex];
+
+    log('Connecting to Sampler with ' + candidates.length + ' candidates');
+
+    // Check if Sampler Data context exists
+    var contextCheck = await codapInterface.sendRequest({
+        action: 'get',
+        resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + ']'
+    });
+
+    if (!contextCheck.success) {
+        alert('Could not find "' + SAMPLER_CONTEXT_NAME + '" data context.\n\nPlease:\n1. Open the Sampler plugin\n2. Set up your mixer/spinner\n3. Run at least one sample\n4. Then click "Connect to Sampler" again.');
+        return;
+    }
+
+    // Get the output attribute name from the Sampler (it might be renamed by user)
+    var attrsResult = await codapInterface.sendRequest({
+        action: 'get',
+        resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attributeList'
+    });
+
+    var outputAttrName = 'output';  // default
+    if (attrsResult.success && attrsResult.values) {
+        // Find the first non-formula attribute (likely the output)
+        for (var i = 0; i < attrsResult.values.length; i++) {
+            var attr = attrsResult.values[i];
+            if (attr.name !== 'sample' && !attr.formula) {
+                outputAttrName = attr.name;
+                break;
+            }
+        }
+    }
+    log('Using output attribute: ' + outputAttrName);
+
+    // Add running count and percentage columns for each candidate
+    var addedCount = 0;
+    for (var i = 0; i < candidates.length; i++) {
+        var word = candidates[i].word;
+        var sanitized = sanitizeAttrName(word);
+        var escapedWord = word.replace(/"/g, '\\"');
+
+        // Check if column already exists
+        var existingCheck = await codapInterface.sendRequest({
+            action: 'get',
+            resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute[Pct_' + sanitized + ']'
+        });
+
+        if (existingCheck.success) {
+            log('Column Pct_' + sanitized + ' already exists, skipping');
+            continue;
+        }
+
+        // Add running count column (hidden)
+        var countColName = 'Count_' + sanitized;
+        var countFormula = 'prev(' + countColName + ', 0) + if(' + outputAttrName + '="' + escapedWord + '", 1, 0)';
+
+        await codapInterface.sendRequest({
+            action: 'create',
+            resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute',
+            values: {
+                name: countColName,
+                title: 'Count ' + word,
+                type: 'numeric',
+                formula: countFormula,
+                hidden: true,
+                description: 'Running count of "' + word + '"'
+            }
+        });
+
+        // Add running percentage column (visible)
+        var pctColName = 'Pct_' + sanitized;
+        var pctFormula = 'if(caseIndex > 0, round(100 * ' + countColName + ' / caseIndex, 0), "")';
+
+        await codapInterface.sendRequest({
+            action: 'create',
+            resource: 'dataContext[' + SAMPLER_CONTEXT_NAME + '].collection[' + SAMPLER_ITEMS_COLLECTION + '].attribute',
+            values: {
+                name: pctColName,
+                title: '% ' + word,
+                type: 'numeric',
+                formula: pctFormula,
+                hidden: false,
+                description: 'Running % of samples that were "' + word + '"'
+            }
+        });
+
+        addedCount++;
+        log('Added percentage column for "' + word + '"');
+    }
+
+    // Open the Sampler Data table to show the new columns
+    await codapInterface.sendRequest({
+        action: 'create',
+        resource: 'component',
+        values: { type: 'caseTable', dataContext: SAMPLER_CONTEXT_NAME }
+    });
+
+    if (addedCount > 0) {
+        log('Connected to Sampler: added ' + addedCount + ' percentage columns');
+        alert('Connected! Added ' + addedCount + ' running percentage columns to "' + SAMPLER_CONTEXT_NAME + '".\n\nNow run the Sampler and watch the percentages converge to the theoretical values.');
+    } else {
+        log('All percentage columns already existed');
+        alert('Percentage columns already exist in "' + SAMPLER_CONTEXT_NAME + '".');
+    }
 }
 
 // ============================================
@@ -1955,6 +2090,7 @@ function updateButtonStates() {
     seqSampleBtn.disabled = !hasModel || !hasSlots;
     openProbTableBtn.disabled = !codapConnected;
     openDiffTableBtn.disabled = !codapConnected || !hasActiveSlot || !slots[activeSlotIndex].diffContextName;
+    connectSamplerBtn.disabled = !codapConnected || !hasActiveSlot || slots[activeSlotIndex].candidates.length === 0;
 }
 
 function updatePathScore() {
@@ -2781,6 +2917,7 @@ document.addEventListener('DOMContentLoaded', function() {
     showPathScore.addEventListener('change', togglePathScore);
     openProbTableBtn.addEventListener('click', openProbabilityTable);
     openDiffTableBtn.addEventListener('click', openDifferentnessTable);
+    connectSamplerBtn.addEventListener('click', connectToSampler);
     
     // Slider listeners
     tempSlider.addEventListener('input', function() {
