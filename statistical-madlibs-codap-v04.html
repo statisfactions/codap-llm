@@ -792,7 +792,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260201e</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v04-20260201f</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -1036,13 +1036,30 @@ var codapInterface = (function() {
     function notificationHandler(request, callback) {
         var action = request.action;
         var resource = request.resource;
-        
-        if (action === 'notify' && notificationSubscribers[resource]) {
-            notificationSubscribers[resource].forEach(function(handler) {
-                handler(request);
+
+        log('CODAP notification: action=' + action + ', resource=' + resource);
+
+        if (action === 'notify') {
+            // Check for exact match first
+            if (notificationSubscribers[resource]) {
+                notificationSubscribers[resource].forEach(function(sub) {
+                    sub.handler(request);
+                });
+            }
+
+            // Also check for pattern matches (e.g., dataContextChangeNotice[Sampler])
+            Object.keys(notificationSubscribers).forEach(function(pattern) {
+                if (pattern !== resource && resource && resource.indexOf(pattern.replace(/\[.*\]/, '')) === 0) {
+                    // Pattern like 'dataContextChangeNotice[X]' matches 'dataContextChangeNotice[X]'
+                    if (resource === pattern || resource.match(new RegExp('^' + pattern.replace(/\[/g, '\\[').replace(/\]/g, '\\]') + '$'))) {
+                        notificationSubscribers[pattern].forEach(function(sub) {
+                            sub.handler(request);
+                        });
+                    }
+                }
             });
         }
-        
+
         if (callback) callback({ success: true });
     }
     
@@ -1114,17 +1131,27 @@ var codapInterface = (function() {
             });
         },
         
-        on: function(resource, eventType, handler) {
-            var key = resource;
+        // Register for notifications. CODAP broadcasts to all plugins; we just filter locally.
+        // Signature matches standard: on(actionSpec, resourceSpec, handler) or on(resourceSpec, handler)
+        on: function(actionSpec, resourceSpec, handler) {
+            // Handle flexible arguments like the standard CodapInterface
+            if (typeof resourceSpec === 'function') {
+                handler = resourceSpec;
+                resourceSpec = actionSpec;
+                actionSpec = 'notify';
+            }
+
+            var key = resourceSpec;
             if (!notificationSubscribers[key]) {
                 notificationSubscribers[key] = [];
             }
-            notificationSubscribers[key].push(handler);
-            
-            return codapInterface.sendRequest({
-                action: 'register',
-                resource: resource
+            notificationSubscribers[key].push({
+                action: actionSpec,
+                handler: handler
             });
+
+            log('Registered notification handler for: ' + key);
+            // No need to send anything to CODAP - it broadcasts to all plugins
         }
     };
 })();
