@@ -792,7 +792,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v05-20260331a</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v05-20260331b</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -2301,12 +2301,13 @@ async function ollamaGetWordCandidates(k, slotIndex) {
         }).join('\n');
     }
 
-    log('Ollama: getting candidates (top_logprobs=' + (k * 3) + ')');
+    var requestedLogprobs = Math.min(k * 3, 20);
+    log('Ollama: getting candidates (top_logprobs=' + requestedLogprobs + ')');
 
     // Step 1: Get top logprobs for the first token
     var resp = await ollamaQuery(messages, {
         logprobs: true,
-        top_logprobs: k * 3,
+        top_logprobs: requestedLogprobs,
         max_tokens: 1,
         temperature: 1.0
     });
