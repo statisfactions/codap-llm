@@ -1,0 +1,477 @@
+[
+  {
+    "id": 901,
+    "domain": "animals",
+    "expected": "",
+    "template": "A pet that many families have is a [Pet]",
+    "candidates": [
+      {
+        "word": "dog",
+        "prob": 0.989507
+      },
+      {
+        "word": "cat",
+        "prob": 0.010429
+      },
+      {
+        "word": "Golden",
+        "prob": 2e-05
+      },
+      {
+        "word": "puppy",
+        "prob": 1e-05
+      },
+      {
+        "word": "Labrador",
+        "prob": 6e-06
+      }
+    ],
+    "elapsed_ms": 15895
+  },
+  {
+    "id": 902,
+    "domain": "animals",
+    "expected": "",
+    "template": "A farm animal that gives us milk is a [Animal]",
+    "candidates": [
+      {
+        "word": "Cow",
+        "prob": 0.999923
+      },
+      {
+        "word": "Cows",
+        "prob": 5.9e-05
+      },
+      {
+        "word": "Dairy",
+        "prob": 1.7e-05
+      }
+    ],
+    "elapsed_ms": 8697
+  },
+  {
+    "id": 903,
+    "domain": "animals",
+    "expected": "",
+    "template": "A bird that can talk is a [Bird]",
+    "candidates": [
+      {
+        "word": "parrot",
+        "prob": 0.999734
+      },
+      {
+        "word": "Polly",
+        "prob": 9.8e-05
+      },
+      {
+        "word": "mimic",
+        "prob": 3.9e-05
+      },
+      {
+        "word": "parable",
+        "prob": 2.5e-05
+      },
+      {
+        "word": "rare",
+        "prob": 1.5e-05
+      },
+      {
+        "word": "talking",
+        "prob": 1.2e-05
+      }
+    ],
+    "elapsed_ms": 13124
+  },
+  {
+    "id": 904,
+    "domain": "animals",
+    "expected": "",
+    "template": "An animal that carries its baby in a pouch is a [Animal]",
+    "candidates": [
+      {
+        "word": "Marsupial",
+        "prob": 0.65197
+      },
+      {
+        "word": "Kangaroo",
+        "prob": 0.346819
+      },
+      {
+        "word": "Koala",
+        "prob": 0.000461
+      },
+      {
+        "word": "Marupial",
+        "prob": 0.000443
+      },
+      {
+        "word": "Mammal",
+        "prob": 0.00012
+      },
+      {
+        "word": "Possum",
+        "prob": 3.9e-05
+      }
+    ],
+    "elapsed_ms": 16571
+  },
+  {
+    "id": 905,
+    "domain": "animals",
+    "expected": "",
+    "template": "A scary animal in the ocean is a [Animal]",
+    "candidates": [
+      {
+        "word": "shark",
+        "prob": 0.991487
+      },
+      {
+        "word": "Sharks",
+        "prob": 0.00478
+      },
+      {
+        "word": "Great",
+        "prob": 0.003326
+      },
+      {
+        "word": "whale",
+        "prob": 0.000249
+      }
+    ],
+    "elapsed_ms": 12994
+  },
+  {
+    "id": 911,
+    "domain": "food",
+    "expected": "",
+    "template": "A hot drink people have in the afternoon is [Drink]",
+    "candidates": [
+      {
+        "word": "tea",
+        "prob": 0.989283
+      },
+      {
+        "word": "coffee",
+        "prob": 0.005371
+      },
+      {
+        "word": "teatime",
+        "prob": 0.003357
+      },
+      {
+        "word": "Chai",
+        "prob": 0.000542
+      },
+      {
+        "word": "afternoon",
+        "prob": 0.000327
+      },
+      {
+        "word": "tee",
+        "prob": 0.000282
+      },
+      {
+        "word": "cup",
+        "prob": 0.000231
+      }
+    ],
+    "elapsed_ms": 10677
+  },
+  {
+    "id": 912,
+    "domain": "food",
+    "expected": "",
+    "template": "A fruit that is red on the inside is a [Fruit]",
+    "candidates": [
+      {
+        "word": "Strawberry",
+        "prob": 0.278026
+      },
+      {
+        "word": "Watermelon",
+        "prob": 0.253315
+      },
+      {
+        "word": "cherry",
+        "prob": 0.177131
+      },
+      {
+        "word": "grapefruit",
+        "prob": 0.138068
+      },
+      {
+        "word": "grapes",
+        "prob": 0.026848
+      },
+      {
+        "word": "tomato",
+        "prob": 0.020022
+      }
+    ],
+    "elapsed_ms": 10515
+  },
+  {
+    "id": 913,
+    "domain": "food",
+    "expected": "",
+    "template": "A food you cook on a grill is a [Food]",
+    "candidates": [
+      {
+        "word": "Food",
+        "prob": 0.480705
+      },
+      {
+        "word": "burger",
+        "prob": 0.293095
+      },
+      {
+        "word": "BBQ",
+        "prob": 0.072377
+      },
+      {
+        "word": "steak",
+        "prob": 0.064513
+      },
+      {
+        "word": "Burgers",
+        "prob": 0.020205
+      },
+      {
+        "word": "barbecued",
+        "prob": 0.014469
+      },
+      {
+        "word": "becue",
+        "prob": 0.010279
+      }
+    ],
+    "elapsed_ms": 13819
+  },
+  {
+    "id": 914,
+    "domain": "food",
+    "expected": "",
+    "template": "A yellow food you put on toast is [Food]",
+    "candidates": [
+      {
+        "word": "Butter",
+        "prob": 0.868265
+      },
+      {
+        "word": "Banana",
+        "prob": 0.095291
+      },
+      {
+        "word": "Cheese",
+        "prob": 0.015636
+      },
+      {
+        "word": "Honey",
+        "prob": 0.007363
+      },
+      {
+        "word": "Jam",
+        "prob": 0.002679
+      },
+      {
+        "word": "Mustard",
+        "prob": 0.002242
+      },
+      {
+        "word": "bananas",
+        "prob": 0.002172
+      }
+    ],
+    "elapsed_ms": 9060
+  },
+  {
+    "id": 915,
+    "domain": "food",
+    "expected": "",
+    "template": "A cold dessert you eat in summer is [Dessert]",
+    "candidates": [
+      {
+        "word": "ice",
+        "prob": 0.941062
+      },
+      {
+        "word": "sorbet",
+        "prob": 0.031678
+      },
+      {
+        "word": "icecream",
+        "prob": 0.010388
+      },
+      {
+        "word": "Icedream",
+        "prob": 0.004468
+      },
+      {
+        "word": "Sundae",
+        "prob": 0.004133
+      },
+      {
+        "word": "gelato",
+        "prob": 0.003947
+      }
+    ],
+    "elapsed_ms": 14398
+  },
+  {
+    "id": 921,
+    "domain": "everyday",
+    "expected": "",
+    "template": "The thing you use to unlock your phone is your [Word]",
+    "candidates": [
+      {
+        "word": "password",
+        "prob": 0.625071
+      },
+      {
+        "word": "passcode",
+        "prob": 0.320045
+      },
+      {
+        "word": "fingerprint",
+        "prob": 0.02695
+      },
+      {
+        "word": "PIN",
+        "prob": 0.009729
+      },
+      {
+        "word": "screen",
+        "prob": 0.007608
+      },
+      {
+        "word": "key",
+        "prob": 0.001679
+      }
+    ],
+    "elapsed_ms": 12168
+  },
+  {
+    "id": 922,
+    "domain": "everyday",
+    "expected": "",
+    "template": "When it rains, you carry an [Object]",
+    "candidates": [
+      {
+        "word": "umbrella",
+        "prob": 0.997573
+      },
+      {
+        "word": "umbrealla",
+        "prob": 0.001825
+      },
+      {
+        "word": "Object",
+        "prob": 0.000445
+      }
+    ],
+    "elapsed_ms": 13626
+  },
+  {
+    "id": 923,
+    "domain": "everyday",
+    "expected": "",
+    "template": "You use scissors to cut [Material]",
+    "candidates": [
+      {
+        "word": "Material",
+        "prob": 0.657365
+      },
+      {
+        "word": "paper",
+        "prob": 0.339056
+      },
+      {
+        "word": "Fabric",
+        "prob": 0.002727
+      },
+      {
+        "word": "Materials",
+        "prob": 0.000277
+      },
+      {
+        "word": "cloth",
+        "prob": 0.000221
+      },
+      {
+        "word": "**Material**",
+        "prob": 5.3e-05
+      }
+    ],
+    "elapsed_ms": 9552
+  },
+  {
+    "id": 924,
+    "domain": "everyday",
+    "expected": "",
+    "template": "A vehicle with two wheels is a [Vehicle]",
+    "candidates": [
+      {
+        "word": "bicycle",
+        "prob": 0.935281
+      },
+      {
+        "word": "motorcycle",
+        "prob": 0.033234
+      },
+      {
+        "word": "bike",
+        "prob": 0.029068
+      },
+      {
+        "word": "bicyclette",
+        "prob": 0.001627
+      },
+      {
+        "word": "cycle",
+        "prob": 0.000467
+      }
+    ],
+    "elapsed_ms": 14389
+  },
+  {
+    "id": 925,
+    "domain": "everyday",
+    "expected": "",
+    "template": "You brush your teeth with a [Object]",
+    "candidates": [
+      {
+        "word": "toothbrush",
+        "prob": 0.90791
+      },
+      {
+        "word": "brush",
+        "prob": 0.040759
+      },
+      {
+        "word": "paste",
+        "prob": 0.018746
+      },
+      {
+        "word": "bristle",
+        "prob": 0.016029
+      },
+      {
+        "word": "brushing",
+        "prob": 0.009269
+      },
+      {
+        "word": "tootbrush",
+        "prob": 0.003683
+      },
+      {
+        "word": "Object",
+        "prob": 0.001381
+      },
+      {
+        "word": "cepillo",
+        "prob": 0.001002
+      }
+    ],
+    "elapsed_ms": 14356
+  }
+]
