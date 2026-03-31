@@ -1,0 +1,4 @@
+# Do not commit this directory — contains API keys
+*
+!.gitignore
+!worker.js.template

@@ -2157,7 +2157,11 @@ function getTopKTokens(probs, k) {
 // ============================================
 
 async function ollamaQuery(messages, options) {
-    var url = ollamaConfig.baseUrl + '/v1/chat/completions';
+    // If baseUrl already ends with /chat/completions (e.g. a CORS proxy worker),
+    // use it directly; otherwise append the standard OpenAI-compatible path.
+    var url = /\/chat\/completions\/?$/.test(ollamaConfig.baseUrl)
+        ? ollamaConfig.baseUrl
+        : ollamaConfig.baseUrl + '/v1/chat/completions';
     var payload = {
         model: ollamaConfig.model,
         messages: messages,
@@ -3491,6 +3495,12 @@ async function initCODAP() {
         ollamaConfig.baseUrl = urlParams.get('server').replace(/\/+$/, '');
         var urlInput = document.getElementById('ollamaBaseUrl');
         if (urlInput) urlInput.value = ollamaConfig.baseUrl;
+        // When using a CORS proxy/worker, the proxy handles auth — no key needed
+        if (!urlParams.get('apiKey')) {
+            ollamaConfig.apiKey = '';
+            var keyInput2 = document.getElementById('ollamaApiKey');
+            if (keyInput2) keyInput2.value = '';
+        }
     }
 
     var result = await codapInterface.init({

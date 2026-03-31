@@ -1,0 +1,44 @@
+// Cloudflare Worker: CORS proxy for Ollama API
+// Deploy via Cloudflare dashboard or wrangler CLI
+//
+// IMPORTANT: Replace YOUR_API_KEY_HERE with your actual Ollama API key
+// before deploying. Do NOT commit this file with the real key.
+
+const OLLAMA_URL = "https://apollo.quocanmeomeo.io.vn/v1/chat/completions";
+const API_KEY = "YOUR_API_KEY_HERE";
+
+export default {
+  async fetch(request) {
+    // Handle CORS preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
+    // Only allow POST
+    if (request.method !== "POST") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+
+    // Forward to Ollama server
+    const resp = await fetch(OLLAMA_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + API_KEY,
+      },
+      body: request.body,
+    });
+
+    // Return response with CORS headers
+    const response = new Response(resp.body, resp);
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    return response;
+  },
+};

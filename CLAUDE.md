@@ -74,6 +74,10 @@ Latest versions are highest numbered. Previous versions kept for reference:
 - `statistical-madlibs-codap-v04.html` - adds variability tracking
 - `token-prob-codap-v9.html` (current)
 
+## Off-Limits Directories
+
+**DO NOT read, browse, or modify** files in `cloudflare-worker/`. It contains API keys. Only `worker.js.template` is safe to reference (committed to git without secrets).
+
 ## Build Tags
 
 **IMPORTANT:** When making changes to plugin files, update the build tag in the header.
