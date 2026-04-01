@@ -792,7 +792,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v05-20260401a</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v06-20260401a</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -844,9 +844,9 @@
         <div class="control-group">
             <div class="control-label">
                 <span>🎯 Top-K</span>
-                <span class="control-value" id="topKValue">3</span>
+                <span class="control-value" id="topKValue">8</span>
             </div>
-            <input type="range" id="topKSlider" min="2" max="20" step="1" value="3">
+            <input type="range" id="topKSlider" min="2" max="20" step="1" value="8">
         </div>
     </div>
     
@@ -1217,7 +1217,7 @@ var templateText = '';
 var slots = [];
 var activeSlotIndex = -1;
 var temperature = 1.0;
-var topK = 3;
+var topK = 8;
 
 var codapConnected = false;
 var runCounter = 0;
