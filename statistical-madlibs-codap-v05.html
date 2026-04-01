@@ -792,7 +792,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v05-20260331c</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v05-20260401a</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -3502,6 +3502,10 @@ async function initCODAP() {
             var keyInput2 = document.getElementById('ollamaApiKey');
             if (keyInput2) keyInput2.value = '';
         }
+    }
+
+    if (urlParams.get('prompt')) {
+        templateInput.value = urlParams.get('prompt');
     }
 
     var result = await codapInterface.init({
