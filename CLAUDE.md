@@ -70,7 +70,8 @@ Default inference backend is Ollama API (`gemma2:9b`). Transformers.js (`onnx-co
 ## Version Files
 
 Latest versions are highest numbered. Previous versions kept for reference:
-- `statistical-madlibs-codap-v05.html` (current) - Ollama API backend, Transformers.js fallback
+- `statistical-madlibs-codap-v06.html` (current) - editable table labels, no auto-open sentences table
+- `statistical-madlibs-codap-v05.html` - Ollama API backend, Transformers.js fallback
 - `statistical-madlibs-codap-v04.html` - adds variability tracking
 - `token-prob-codap-v9.html` (current)
 

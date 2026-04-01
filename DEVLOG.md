@@ -1,5 +1,14 @@
 # Development Log
 
+## 2026-04-01: v06 — Editable table labels, suppress sentences table
+
+### Changes
+- **Editable table label field**: Added a text input next to "Prepare Slot" that controls the suffix used for `Words_` and `Variability_` table names in CODAP. Defaults to the slot name but can be changed freely. Solves two problems:
+  1. Mystery word machine prompts no longer reveal the answer category (e.g., change "planet" to "word" so tables show as `Words_word` instead of `Words_planet`)
+  2. Multiple prompts with the same slot name (e.g., three different planet prompts) can use distinct labels to avoid ambiguity about which data you're looking at
+- **Sentences table no longer auto-opens**: The `MadLibsData` context is still created for future use, but its case table doesn't pop up on load — it was extraneous for the sampling-focused workflow
+- **New file**: `statistical-madlibs-codap-v06.html` (bumped from v05)
+
 ## 2026-01-30: Prompt Engineering Experiments for Slot Filling
 
 ### Goal
