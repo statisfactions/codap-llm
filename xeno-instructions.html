@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xeno Instructions — WS 10.2</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-cream: #faf8f5;
+            --bg-warm: #f5f0e8;
+            --text-dark: #2d2a26;
+            --text-muted: #6b6560;
+            --accent-teal: #1d7a8c;
+            --accent-teal-light: #e8f4f6;
+            --accent-gold: #c9a227;
+            --accent-gold-light: #fdf8e8;
+            --border-light: #e5e0d8;
+            --shadow-soft: 0 2px 8px rgba(45, 42, 38, 0.08);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg-cream);
+            color: var(--text-dark);
+            font-size: 15px;
+            line-height: 1.6;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 40px 24px 64px;
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-teal);
+            padding-bottom: 16px;
+            margin-bottom: 36px;
+        }
+
+        header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--accent-teal);
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        section {
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            background: var(--accent-teal);
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 18px;
+        }
+
+        h3 {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin: 18px 0 10px;
+        }
+
+        p {
+            margin-bottom: 10px;
+        }
+
+        ol {
+            padding-left: 0;
+            list-style: none;
+            counter-reset: step;
+        }
+
+        ol li {
+            counter-increment: step;
+            position: relative;
+            padding-left: 34px;
+            margin-bottom: 10px;
+        }
+
+        ol li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 2px;
+            background: var(--bg-warm);
+            border: 1px solid var(--border-light);
+            color: var(--text-muted);
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .key {
+            background: var(--bg-warm);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 1px 7px;
+            font-size: 13px;
+            font-family: monospace;
+            white-space: nowrap;
+        }
+
+        .note {
+            background: var(--accent-gold-light);
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            padding: 10px 14px;
+            margin: 14px 0;
+            font-size: 14px;
+            color: var(--text-dark);
+        }
+
+        .note strong { color: #8a6800; }
+
+        .tip {
+            background: var(--accent-teal-light);
+            border-left: 3px solid var(--accent-teal);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            padding: 10px 14px;
+            margin: 14px 0;
+            font-size: 14px;
+        }
+
+        .tip strong { color: var(--accent-teal); }
+
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border-light);
+            margin: 36px 0;
+        }
+
+        .screenshot {
+            display: block;
+            max-width: 100%;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-soft);
+            margin-top: 12px;
+        }
+
+        .screenshot-caption {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .ex-ref {
+            display: inline-block;
+            background: var(--bg-warm);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 0 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+
+        footer {
+            color: var(--text-muted);
+            font-size: 13px;
+            border-top: 1px solid var(--border-light);
+            padding-top: 16px;
+            margin-top: 48px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Xeno &amp; Arbor — Instructions</h1>
+    <p>For WS 10.2: Classification &nbsp;·&nbsp; CORE103 Spring 2026</p>
+</header>
+
+<!-- PART 1 -->
+<section>
+    <h2>Part 1: Ague</h2>
+
+    <h3><span class="ex-ref">1.1</span> Getting started</h3>
+    <ol>
+        <li>In the top-left dropdown, make sure <strong>ague</strong> is selected.</li>
+        <li>Set the mode selector on the left to <span class="key">training</span>.</li>
+        <li>Click <span class="key">make new cases</span> to generate 10 training cases.</li>
+    </ol>
+    <img class="screenshot" src="https://codap.xyz/plugins/xeno/instructions/en/art/arborControls.png" alt="The Xeno control panel showing the malady selector, mode selector, and make new cases button">
+    <p class="screenshot-caption">The Xeno control panel — malady selector top-left, mode selector on the left, make new cases button in the center.</p>
+    <div class="tip"><strong>What you're looking at:</strong> Each row is one alien creature. The <strong>Xhealth</strong> column is what you want to predict — sick or well. Everything else (hair color, eye color, etc.) is a potential <em>feature</em>.</div>
+
+    <h3><span class="ex-ref">1.2</span> Making a graph</h3>
+    <ol>
+        <li>In the CODAP toolbar, click the <strong>graph icon</strong> to open a new graph.</li>
+        <li>Drag a column header from the data table onto the x-axis.</li>
+        <li>Drag <strong>Xhealth</strong> onto the y-axis.</li>
+        <li>Look at how the dots separate — does one value of your feature line up mostly with <em>sick</em>? Mostly with <em>well</em>? Or is it a mess?</li>
+        <li>Try different features until you find one that gives a clear separation.</li>
+    </ol>
+
+    <h3><span class="ex-ref">1.4</span> Building a tree in Arbor</h3>
+    <ol>
+        <li>Click the <span class="key">tree</span> button in the upper-right corner of Xeno to open Arbor.</li>
+        <li>Drag <strong>Xhealth</strong> from the data table into the tree panel — this is the thing you want to predict, and it goes in first.
+            <img class="screenshot" src="https://codap.xyz/plugins/xeno/instructions/en/art/treeRootAndTrunk.png" alt="The Arbor tree panel after dragging in Xhealth, showing the root node">
+            <p class="screenshot-caption">The root node appears, showing the overall split of sick vs. well in your training data.</p>
+        </li>
+        <li>Drag the feature you identified into the tree. It creates a split with two branches.
+            <img class="screenshot" src="https://codap.xyz/plugins/xeno/instructions/en/art/treeOneSplitHairNoDiag.png" alt="The tree after adding a feature, showing two branches with no diagnoses assigned yet">
+            <p class="screenshot-caption">Two branches appear — one for each value of your feature. The leaf nodes are empty until you assign diagnoses.</p>
+        </li>
+        <li>Click each leaf node to assign a diagnosis: <strong>sick</strong> or <strong>well</strong>.
+            <img class="screenshot" src="https://codap.xyz/plugins/xeno/instructions/en/art/treeOneSplitDiagGood.png" alt="A completed tree with diagnoses assigned to both leaf nodes">
+            <p class="screenshot-caption">A finished tree — each branch ends with a diagnosis. Ready to test.</p>
+        </li>
+    </ol>
+
+    <h3><span class="ex-ref">1.5</span> Testing your tree</h3>
+    <ol>
+        <li>Change the mode selector from <span class="key">training</span> to <span class="key">auto</span>.</li>
+        <li>Click <span class="key">run tree</span>. Xeno generates 10 new cases and applies your rules automatically.</li>
+        <li>Count how many it got right. That's your accuracy.</li>
+    </ol>
+    <div class="tip"><strong>Why new cases?</strong> The real test is whether your rule works on creatures you've never seen before — that's what auto mode checks.</div>
+</section>
+
+<hr class="section-divider">
+
+<!-- PART 2 -->
+<section>
+    <h2>Part 2: Botulosis</h2>
+
+    <p>Switch the malady dropdown to <strong>botulosis</strong>, then click <span class="key">make new cases</span> to get 10 training cases.</p>
+
+    <p>Use the same steps as Part 1: make graphs to explore the data <span class="ex-ref">2.1</span>, write your rule in plain English before touching Arbor <span class="ex-ref">2.2</span>, build the tree <span class="ex-ref">2.3</span>, then switch to auto and run it <span class="ex-ref">2.4</span>.</p>
+
+    <div class="note"><strong>Hint:</strong> Botulosis may require more than one feature. If one feature doesn't give you perfect accuracy, try dragging a second feature onto one of the leaf nodes to add another level to the tree.</div>
+</section>
+
+<hr class="section-divider">
+
+<!-- PART 3 -->
+<section>
+    <h2>Part 3: Dengueso</h2>
+
+    <p>Switch to <strong>dengueso</strong> and get 10 training cases. The key feature here is a <em>number</em>, not a category — so you'll need to set a cut point in Arbor.</p>
+
+    <h3><span class="ex-ref">3.3</span> Using a numeric feature (the gear icon)</h3>
+    <ol>
+        <li>Drag your numeric feature into the tree as usual. Then hover over the feature name in the tree — a <strong>gear icon</strong> appears to its left.
+            <img class="screenshot" src="https://codap.xyz/plugins/xeno/instructions/en/art/showGearButton.png" alt="The gear icon appearing when hovering over a feature name in the tree">
+            <p class="screenshot-caption">Hover over the feature name to reveal the gear icon.</p>
+        </li>
+        <li>Click the gear icon. Set your <strong>cut point</strong> and choose the operator (<strong>greater than</strong> or <strong>less than</strong>).
+            <img class="screenshot" src="https://codap.xyz/plugins/xeno/instructions/en/art/configurationWeight.png" alt="The numeric attribute configuration dialog showing cut point and operator settings">
+            <p class="screenshot-caption">Set the number where you want to draw the line, and which side predicts sick.</p>
+        </li>
+        <li>Close the panel and check that the branches look right, then test in auto mode.</li>
+    </ol>
+    <div class="note"><strong>Choosing a cut point:</strong> Look at your graph from Exercise 3.1. Where does the boundary between sick and well seem to fall? Pick a number in that gap.</div>
+</section>
+
+<hr class="section-divider">
+
+<!-- PART 4 -->
+<section>
+    <h2>Part 4: Sumonoma — The Competition</h2>
+
+    <p>Switch to <strong>sumonoma</strong> and get <strong>20 training cases</strong>. Build your tree the same way as before. You can get more cases at any time — but the competition scores you on <em>new</em> cases, not the ones you trained on.</p>
+
+    <h3><span class="ex-ref">4.3</span> Sharing your CODAP document</h3>
+    <ol>
+        <li>In CODAP, click the <strong>hamburger menu</strong> (☰) in the top-left corner.</li>
+        <li>Select <strong>Share &gt; Get link to shared view</strong>.</li>
+        <li>Copy the link and paste it into Exercise 4.3 on your worksheet.</li>
+    </ol>
+    <div class="tip"><strong>What this does:</strong> Creates a read-only snapshot of your CODAP document — data and tree — that your instructor can use to evaluate your model on 100 new cases.</div>
+</section>
+
+<footer>
+    Created by Ethan C. Brown in collaboration with Claude Code &nbsp;·&nbsp; CORE103 Spring 2026
+</footer>
+
+</body>
+</html>
