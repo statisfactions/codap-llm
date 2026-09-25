@@ -29,8 +29,9 @@ belong in the private project storage.
 - **4.1 and 4.2** open with the model's word pool already loaded in the Sampler, so drawing
   works straight away.
 - **5 Your prompt** opens with an empty Sampler. Type the participant's prompt, click **Parse
-  Template**, prepare the slot, then **Connect to Sampler**. If the graph shows "Drag an
-  attribute", drag **Word** from the items table onto it. (Not yet tested with a live code.)
+  Template**, prepare the slot, then **Connect to Sampler**. If the draws come out as
+  "connect-to-sampler-first", the Sampler is still on the template's placeholder: connect it,
+  then clear the data and draw again.
 
 ## Adding a template
 
