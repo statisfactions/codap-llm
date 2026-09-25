@@ -1,44 +1,150 @@
-// Cloudflare Worker: CORS proxy for Ollama API
-// Deploy via Cloudflare dashboard or wrangler CLI
+// Cloudflare Worker: access-controlled proxy from the Statistical Mad Libs plugin to Ollama.
 //
-// IMPORTANT: Replace YOUR_API_KEY_HERE with your actual Ollama API key
-// before deploying. Do NOT commit this file with the real key.
+// This file holds no secrets. Everything sensitive is a Worker secret, set with
+// `wrangler secret put NAME` or in the dashboard (Settings > Variables and Secrets):
+//
+//   UPSTREAM_URL     full chat-completions URL of the Ollama server
+//   UPSTREAM_KEY     the Ollama server's API key
+//   ACCESS_CODES     comma-separated name:code pairs, e.g. "ethan:k3...,ra1:9f...".
+//                    One code per person, so one can be revoked without the others.
+//                    The name only appears in logs.
+//
+// Optional plain variables (not secret):
+//
+//   ALLOWED_ORIGINS  comma-separated browser origins (default: the plugin's GitHub Pages site)
+//   ALLOWED_MODELS   comma-separated model names (default: gemma2:9b)
+//
+// The plugin sends the access code as "Authorization: Bearer <code>". The worker checks
+// it, then swaps in the upstream key, so the Ollama key never reaches the browser.
+// Only the request fields the plugin uses are forwarded, with limits, so a leaked code
+// gets a one-token logprob service, not a general chatbot.
 
-const OLLAMA_URL = "https://apollo.quocanmeomeo.io.vn/v1/chat/completions";
-const API_KEY = "YOUR_API_KEY_HERE";
+const DEFAULT_ORIGINS = "https://statisfactions.github.io";
+const DEFAULT_MODELS = "gemma2:9b";
+
+// Limits: the plugin only ever asks for one token at a time.
+const MAX_TOKENS = 5;
+const MAX_TOP_LOGPROBS = 20;
+const MAX_MESSAGES = 4;
+const MAX_CHARS = 4000; // total characters across all messages
+
+function list(value, fallback) {
+  return (value || fallback).split(",").map(s => s.trim()).filter(Boolean);
+}
+
+function corsHeaders(origin) {
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+  };
+}
+
+function reply(status, message, cors) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { "Content-Type": "application/json", ...cors },
+  });
+}
+
+// Compare fixed-length digests so the check takes the same time whatever the input.
+async function sameSecret(a, b) {
+  const enc = new TextEncoder();
+  const [da, db] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(a)),
+    crypto.subtle.digest("SHA-256", enc.encode(b)),
+  ]);
+  return crypto.subtle.timingSafeEqual(da, db);
+}
+
+async function whoIs(code, env) {
+  let found = null;
+  for (const pair of list(env.ACCESS_CODES, "")) {
+    const i = pair.indexOf(":");
+    if (i < 1) continue;
+    // Check every pair, even after a match, so timing doesn't reveal the position.
+    if (await sameSecret(code, pair.slice(i + 1)) && !found) found = pair.slice(0, i);
+  }
+  return found;
+}
+
+// Rebuild the request from the fields the plugin uses; anything else is dropped.
+function sanitize(body, env) {
+  if (!body || typeof body !== "object") return "body must be a JSON object";
+  if (!list(env.ALLOWED_MODELS, DEFAULT_MODELS).includes(body.model)) return "model not allowed";
+  const messages = body.messages;
+  if (!Array.isArray(messages) || messages.length < 1 || messages.length > MAX_MESSAGES) {
+    return "bad messages";
+  }
+  let chars = 0;
+  for (const m of messages) {
+    if (!m || !["system", "user", "assistant"].includes(m.role) || typeof m.content !== "string") {
+      return "bad messages";
+    }
+    chars += m.content.length;
+  }
+  if (chars > MAX_CHARS) return "prompt too long";
+
+  const maxTokens = Number(body.max_tokens ?? 1);
+  const topLogprobs = Number(body.top_logprobs ?? 1);
+  const temperature = Number(body.temperature ?? 1);
+  if (!(maxTokens >= 1 && maxTokens <= MAX_TOKENS)) return "max_tokens out of range";
+  if (!(topLogprobs >= 0 && topLogprobs <= MAX_TOP_LOGPROBS)) return "top_logprobs out of range";
+  if (!(temperature >= 0 && temperature <= 2)) return "temperature out of range";
+
+  return {
+    model: body.model,
+    messages: messages.map(m => ({ role: m.role, content: m.content })),
+    logprobs: body.logprobs === true,
+    top_logprobs: Math.floor(topLogprobs),
+    max_tokens: Math.floor(maxTokens),
+    temperature,
+    stream: false,
+  };
+}
 
 export default {
-  async fetch(request) {
-    // Handle CORS preflight
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Max-Age": "86400",
-        },
-      });
+  async fetch(request, env) {
+    const origin = request.headers.get("Origin");
+    const allowed = list(env.ALLOWED_ORIGINS, DEFAULT_ORIGINS);
+    // Browsers always send Origin on these requests. A request without one (curl,
+    // scripts) still needs a valid access code.
+    if (origin && !allowed.includes(origin)) {
+      return new Response("Origin not allowed", { status: 403 });
     }
+    const cors = origin ? corsHeaders(origin) : {};
 
-    // Only allow POST
-    if (request.method !== "POST") {
-      return new Response("Method not allowed", { status: 405 });
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+    if (request.method !== "POST") return reply(405, "Method not allowed", cors);
+
+    const auth = request.headers.get("Authorization") || "";
+    const code = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+    const who = code ? await whoIs(code, env) : null;
+    if (!who) return reply(401, "Access code missing or not valid", cors);
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return reply(400, "Body is not valid JSON", cors);
     }
+    const clean = sanitize(body, env);
+    if (typeof clean === "string") return reply(400, clean, cors);
 
-    // Forward to Ollama server
-    const resp = await fetch(OLLAMA_URL, {
+    console.log(`request from ${who}`);
+    const upstream = await fetch(env.UPSTREAM_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + API_KEY,
+        "Authorization": "Bearer " + env.UPSTREAM_KEY,
       },
-      body: request.body,
+      body: JSON.stringify(clean),
     });
 
-    // Return response with CORS headers
-    const response = new Response(resp.body, resp);
-    response.headers.set("Access-Control-Allow-Origin", "*");
+    const response = new Response(upstream.body, upstream);
+    for (const [k, v] of Object.entries(cors)) response.headers.set(k, v);
     return response;
   },
 };

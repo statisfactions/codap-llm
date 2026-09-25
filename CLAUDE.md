@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 CODAP plugins for exploring language model probability distributions in educational contexts. Default inference backend is Ollama API (remote server, `gemma2:9b`); Transformers.js (in-browser) available as fallback. Integrates with CODAP (Common Online Data Analysis Platform).
 
 **Two main plugins:**
-- `statistical-madlibs-codap-v05.html` - Mad libs game with slot-based probability exploration and variability tracking
+- `statistical-madlibs-codap-v07.html` - Mad libs game with slot-based probability exploration and variability tracking
 - `token-prob-codap-v9.html` - Real-time token probability distribution viewer
 
 ## Running Locally
@@ -70,7 +70,8 @@ Default inference backend is Ollama API (`gemma2:9b`). Transformers.js (`onnx-co
 ## Version Files
 
 Latest versions are highest numbered. Previous versions kept for reference:
-- `statistical-madlibs-codap-v06.html` (current) - editable table labels, no auto-open sentences table
+- `statistical-madlibs-codap-v07.html` (current) - access code for the worker, saved in browser storage; `?apiKey=` URL param removed
+- `statistical-madlibs-codap-v06.html` - editable table labels, no auto-open sentences table
 - `statistical-madlibs-codap-v05.html` - Ollama API backend, Transformers.js fallback
 - `statistical-madlibs-codap-v04.html` - adds variability tracking
 - `token-prob-codap-v9.html` (current)
