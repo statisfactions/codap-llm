@@ -91,3 +91,9 @@ Format: `vXX-YYYYMMDDx` where:
 Location in statistical-madlibs: Look for the `<h1>` tag with "Statistical Mad Libs" and update the version span.
 
 Example: `v04-20260131a` → `v04-20260131b` (next change same day) → `v04-20260201a` (next day)
+
+## Templates and Testing
+
+- `templates/` holds blank interview documents that open from a CODAP `?url=` link (see its README). The repo is public: never add participant data or the worker URL to anything here.
+- `tools/` checks a document headlessly: `cd tools && npm i` once, then `node load-test.js <file.codap | url>`. It prints the tiles CODAP loaded and any console errors, and saves a screenshot to `tools/out/`. Chromium comes from `~/.cache/ms-playwright`.
+- Pushing is done by the user from a forwarded agent. Commit only; don't try to push.
