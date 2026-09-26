@@ -35,12 +35,12 @@ belong in the private project storage.
   draw again. (The plugin's "Connect to Sampler" button is not part of this: it adds
   running percentages.)
 - The full interviewer guide, with screenshots, is in the private project repo
-  (`Data Collection/codap-guide-v01`).
+  (`Materials/codap-guide-v01`).
 
 ## Adding a template
 
 1. Build the document in CODAP, save it, and download the `.codap` file. The 4.x and 5
-   templates are generated from the private project repo by `Data Collection/CODAP/build_templates.py`.
+   templates are generated from the private project repo by `Templates/build_templates.py`.
 2. Add it here with a lowercase, hyphenated name and a version number (e.g. `planet-prompts-v01.codap`).
 3. Check it holds no participant data (tables should be empty or hold only preloaded data).
 4. Add a row to the table above. The link is
