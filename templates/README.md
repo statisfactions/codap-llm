@@ -29,9 +29,13 @@ belong in the private project storage.
 - **4.1 and 4.2** open with the model's word pool already loaded in the Sampler, so drawing
   works straight away.
 - **5 Your prompt** opens with an empty Sampler. Type the participant's prompt, click **Parse
-  Template**, prepare the slot, then **Connect to Sampler**. If the draws come out as
-  "connect-to-sampler-first", the Sampler is still on the template's placeholder: connect it,
-  then clear the data and draw again.
+  Template**, then **Prepare Slot**. When the panel says the slot is ready, choose the
+  **Words_…** item in the Sampler's Collector dropdown and draw. If draws come out as
+  "connect-to-sampler-first", that dropdown step was skipped: choose the pool, **CLEAR DATA**,
+  draw again. (The plugin's "Connect to Sampler" button is not part of this: it adds
+  running percentages.)
+- The full interviewer guide, with screenshots, is in the private project repo
+  (`Data Collection/codap-guide-v01`).
 
 ## Adding a template
 
