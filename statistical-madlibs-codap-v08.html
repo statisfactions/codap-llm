@@ -794,7 +794,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v08-20261108b</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v08-20261108c</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -3206,6 +3206,8 @@ function applyStudentMode() {
     document.getElementById('templateHint').textContent =
         'End your prompt with one blank in square brackets, like [Fruit].';
     prepareSlotBtn.textContent = prepareLabel();
+    // There's no Parse button: show the sentence as the student types, blank highlighted.
+    templateInput.addEventListener('input', parseTemplate);
 }
 
 function displayCandidates(slot, candidates, context) {
@@ -3669,6 +3671,7 @@ async function initCODAP() {
     if (urlParams.get('mode') === 'student') {
         studentMode = true;
         applyStudentMode();
+        parseTemplate();
     }
 
     var result = await codapInterface.init({
