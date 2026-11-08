@@ -8,8 +8,9 @@
 // student mode hides the researcher controls; the Sampler is already set to the pool and is
 // never touched. With --quick (the 4.x templates) it draws once from the saved pool. Without
 // it (section 5), it also checks prompt validation, START pressed while the model is still
-// working, a second prompt in the same tab, and quick prompt/draw cycles: every draw must come
-// from the newest pool and carry its Prompt, Run and Settings columns.
+// working, a second prompt in the same tab, quick prompt/draw cycles (every draw must come
+// from the newest pool and carry its Prompt, Run and Settings columns), and that the model's
+// special tokens (<eos> etc.) never become candidate words.
 // Exits 1 if any check fails. Screenshot: out/<template>-test.png
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
@@ -156,6 +157,18 @@ function check(ok, what, detail) {
       check(d.length === 200 && d.every(x => poolWords.has(x.Word)), 'draws come from the saved pool', tally(d));
       check(d.every(x => x.Prompt === prompt && x.Run === 'saved'), 'draws carry the prompt and Run "saved"', JSON.stringify(d[0]));
     } else {
+      // The real candidate pipeline with the API stubbed: special tokens never become words
+      const words = await mad.evaluate(async () => {
+        templateInput.value = 'The hottest planet in the solar system is [Planet]';
+        parseTemplate();
+        const lp = (token, p) => ({ token, logprob: Math.log(p) });
+        ollamaQuery = async (messages, options) => options.logprobs
+          ? { choices: [{ logprobs: { content: [{ top_logprobs: [lp(' Venus', .6), lp('<eos>', .2), lp('<end_of_turn>', .1), lp(' Mercury', .05), lp('<pad>', .05)] }] } }] }
+          : { choices: [{ message: { content: '.' } }] };
+        return (await ollamaGetWordCandidates(8, 0)).map(c => c.word);
+      });
+      check(JSON.stringify(words) === '["Venus","Mercury"]', 'special tokens (<eos>, <end_of_turn>, <pad>) never become candidates', JSON.stringify(words));
+
       // Validation
       await setModel([['x', 1]], 0);
       for (const [bad, expect] of [['What is the best fruit', /Add a blank/], ['The [best fruit] is', /one word/], ['The [Fruit] is tasty', /very end/], ['A [Fruit] and a [Fruit]', /just one blank/]]) {

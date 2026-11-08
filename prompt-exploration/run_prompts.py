@@ -34,6 +34,12 @@ WORD_BOUNDARY_START = re.compile(r'^[\s.,!?;:\'")\]}>]')
 CLEANUP_LEADING = re.compile(r'^[.,!?;:\'"()\[\]{}<>]+')
 CLEANUP_TRAILING = re.compile(r'[.,!?;:\'"()\[\]{}<>]+$')
 SPECIAL_TOKEN = re.compile(r'<\|.*?\|>')
+# Gemma's special tokens (<eos>, <end_of_turn>, <pad>) also come back as text
+GEMMA_SPECIAL = re.compile(r'^\s*</?[A-Za-z0-9_]*>?\s*$')
+
+
+def is_special_token(text):
+    return '<|' in text or '|>' in text or bool(GEMMA_SPECIAL.match(text))
 
 
 def load_api_key():
@@ -123,7 +129,7 @@ def greedy_complete_to_word(api_key, model, messages, initial_token_text,
     word = initial_token_text
 
     # Skip special tokens or empty
-    if '<|' in word or '|>' in word or not word.strip():
+    if is_special_token(word) or not word.strip():
         return ''
 
     # Check if already at a word boundary
@@ -149,11 +155,8 @@ def greedy_complete_to_word(api_key, model, messages, initial_token_text,
         choice = resp['choices'][0]
         next_token = choice['message']['content']
 
-        # Stop on special tokens
-        if '<|' in next_token or '|>' in next_token:
-            break
-        # Stop on EOS
-        if next_token == '<eos>' or next_token == '':
+        # Stop on special tokens or EOS
+        if next_token == '' or is_special_token(next_token):
             break
         # Stop if next token starts with word boundary
         if WORD_BOUNDARY_START.match(next_token):
@@ -172,6 +175,9 @@ def greedy_complete_to_word(api_key, model, messages, initial_token_text,
     word = CLEANUP_LEADING.sub('', word)
     word = CLEANUP_TRAILING.sub('', word)
     word = SPECIAL_TOKEN.sub('', word)
+    # Never offer a fragment of markup as a word
+    if re.search(r'[<>]', word):
+        return ''
     return word
 
 

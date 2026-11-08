@@ -794,7 +794,7 @@
 </head>
 <body>
     <div class="header">
-        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v08-20261108a</span></h1>
+        <h1><span>🎰</span> Statistical Mad Libs <span style="font-size: 10px; font-weight: normal; color: var(--text-muted); font-family: 'DM Sans', sans-serif;">v08-20261108b</span></h1>
         <div class="connection-badge">
             <span class="connection-dot" id="codapDot"></span>
             <span id="codapStatus">Initializing...</span>
@@ -2287,6 +2287,13 @@ var CLEANUP_LEADING_RE = /^[.,!?;:'"()\[\]{}<>]+/;
 var CLEANUP_TRAILING_RE = /[.,!?;:'"()\[\]{}<>]+$/;
 var SPECIAL_TOKEN_RE = /<\|.*?\|>/g;
 
+// Special tokens come back from the API as text: <|...|> (Qwen) or <eos>, <end_of_turn>,
+// <pad> (Gemma). They aren't words. Left in, "<eos>" loses its '>' to the punctuation
+// cleanup and turns up as the candidate "<eos".
+function isSpecialToken(text) {
+    return text.includes('<|') || text.includes('|>') || /^\s*<\/?[A-Za-z0-9_]*>?\s*$/.test(text);
+}
+
 /**
  * Greedy-complete a token to a full word via the Ollama API.
  * Mirrors run_prompts.py greedyCompleteToWord().
@@ -2295,7 +2302,7 @@ async function ollamaGreedyCompleteToWord(messages, initialTokenText) {
     var word = initialTokenText;
 
     // Skip special tokens or empty
-    if (word.includes('<|') || word.includes('|>') || !word.trim()) {
+    if (isSpecialToken(word) || !word.trim()) {
         return '';
     }
 
@@ -2326,8 +2333,7 @@ async function ollamaGreedyCompleteToWord(messages, initialTokenText) {
         var nextToken = resp.choices[0].message.content;
 
         // Stop on special tokens or EOS
-        if (nextToken.includes('<|') || nextToken.includes('|>')) break;
-        if (nextToken === '<eos>' || nextToken === '') break;
+        if (nextToken === '' || isSpecialToken(nextToken)) break;
         // Stop if next token starts with word boundary
         if (WORD_BOUNDARY_START_RE.test(nextToken)) break;
 
@@ -2346,6 +2352,8 @@ async function ollamaGreedyCompleteToWord(messages, initialTokenText) {
     word = word.replace(CLEANUP_LEADING_RE, '');
     word = word.replace(CLEANUP_TRAILING_RE, '');
     word = word.replace(SPECIAL_TOKEN_RE, '');
+    // Never offer a fragment of markup as a word
+    if (/[<>]/.test(word)) return '';
     return word;
 }
 

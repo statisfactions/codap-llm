@@ -26,6 +26,11 @@ For the next interview phase students operate CODAP themselves.
   pressing START.
 - **No server URL in the file.** The default is empty; templates pass `?server=`.
 - Templates v02 also pin the Sampler to `sampler.concord.org/version/v1.0.5/`.
+- **Special tokens (v08-20261108b).** Gemma's `<eos>`, `<end_of_turn>` and `<pad>` come back
+  from the API as text. Only `<|...|>` tokens were skipped, so `<eos>` lost its `>` to the
+  punctuation cleanup and became the candidate "<eos" (seen at 0.00007% in the saved 4.1
+  distribution; it never reached a pool). `isSpecialToken()` now skips them, and no word
+  containing `<` or `>` is offered. Same fix in `prompt-exploration/run_prompts.py`.
 
 ## 2026-04-01: v06 — Editable table labels, suppress sentences table
 
