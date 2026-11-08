@@ -12,8 +12,8 @@ itself can't be overwritten by accident.
 | 5 Your prompt (v02, student mode) | [open in CODAP](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fyour-prompt-v02.codap) |
 
 The v02 templates use plugin v08 for interviews where the student drives (see below). The v01
-templates (plugin v07, interviewer drives) are still in the folder and match the current
-interviewer guide: [4.1](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fplanet-hottest-v01.codap),
+templates (plugin v07, interviewer drives) are still in the folder and match interviewer
+guide v01: [4.1](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fplanet-hottest-v01.codap),
 [4.2](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fplanet-coldest-v01.codap),
 [5](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fyour-prompt-v01.codap).
 
@@ -59,7 +59,7 @@ belong in the private project storage.
   draw again. (The plugin's "Connect to Sampler" button is not part of this: it adds
   running percentages.)
 - The full interviewer guide, with screenshots, is in the private project repo
-  (`Materials/codap-guide-v01`).
+  (`Materials/codap-guide-v02` for the v02 templates; v01 is in `Materials/archive/`).
 
 ## Adding a template
 
