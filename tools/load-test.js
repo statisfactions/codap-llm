@@ -11,6 +11,16 @@ const path = require('path');
 const fs = require('fs');
 
 const CODAP = 'https://codap3.concord.org/';
+
+// Playwright's pinned Chromium, or the newest one installed if that's missing.
+function chromiumPath() {
+  const pinned = chromium.executablePath();
+  if (fs.existsSync(pinned)) return undefined;
+  const cache = path.join(process.env.HOME, '.cache', 'ms-playwright');
+  const dirs = fs.readdirSync(cache).filter(d => d.startsWith('chromium_headless_shell-')).sort();
+  if (!dirs.length) throw new Error('no Chromium in ' + cache + ': run npx playwright install chromium');
+  return path.join(cache, dirs[dirs.length - 1], 'chrome-headless-shell-linux64', 'chrome-headless-shell');
+}
 const PORT = 8765;
 const repoRoot = path.resolve(__dirname, '..');
 
@@ -29,6 +39,7 @@ const repoRoot = path.resolve(__dirname, '..');
   fs.mkdirSync(path.dirname(shot), { recursive: true });
 
   const browser = await chromium.launch({
+    executablePath: chromiumPath(),
     // Chrome blocks public sites from fetching localhost unless these checks are off.
     args: ['--disable-features=BlockInsecurePrivateNetworkRequests,PrivateNetworkAccessRespectPreflightResults,LocalNetworkAccessChecks'],
   });

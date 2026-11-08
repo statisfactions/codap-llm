@@ -7,9 +7,15 @@ itself can't be overwritten by accident.
 | Activity | Open link |
 |---|---|
 | 3 Mystery Word Machine (v02) | [open in CODAP](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fmystery-word-machine-v02.codap) |
-| 4.1 Hottest planet (v01) | [open in CODAP](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fplanet-hottest-v01.codap) |
-| 4.2 Coldest planet (v01) | [open in CODAP](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fplanet-coldest-v01.codap) |
-| 5 Your prompt (v01) | [open in CODAP](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fyour-prompt-v01.codap) |
+| 4.1 Hottest planet (v02, student mode) | [open in CODAP](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fplanet-hottest-v02.codap) |
+| 4.2 Coldest planet (v02, student mode) | [open in CODAP](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fplanet-coldest-v02.codap) |
+| 5 Your prompt (v02, student mode) | [open in CODAP](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fyour-prompt-v02.codap) |
+
+The v02 templates use plugin v08 for interviews where the student drives (see below). The v01
+templates (plugin v07, interviewer drives) are still in the folder and match the current
+interviewer guide: [4.1](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fplanet-hottest-v01.codap),
+[4.2](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fplanet-coldest-v01.codap),
+[5](https://codap3.concord.org/?url=https%3A%2F%2Fstatisfactions.github.io%2Fcodap-llm%2Ftemplates%2Fyour-prompt-v01.codap).
 
 A copy opened from a link is named "Untitled Document". At the start of the interview, rename
 it to the activity plus the participant ID (e.g. `3 Mystery Word Machine aa07`) and save it
@@ -18,7 +24,25 @@ to the project's private storage.
 **No participant data in this folder.** The repo is public. Completed interview documents
 belong in the private project storage.
 
-## Notes for the interviewer instructions (to be written up)
+## v02: what changed for students driving
+
+- **Student mode.** The Mad Libs panel shows only the prompt box and one button, **Get the
+  AI's answers**, which checks the prompt (one blank, one word in the brackets, at the very
+  end) and explains any problem in plain words. While the model works, the panel counts the
+  seconds and says to wait before pressing START.
+- **No Sampler dropdown step in section 5.** The Sampler is already set to `Words_Answer`, and
+  each prompt replaces that pool. Draws made before the first prompt is ready show
+  `no-prompt-yet`.
+- **Every draw records its source.** The Sampler's table has `Prompt`, `Run` (e.g.
+  `2 · 10:42:05`) and `Settings` (model, top-K, temperature, plugin build) columns. Draws
+  from the saved 4.x pools say `saved`. If two prompts end up in one tab, put `Run` on the
+  graph's vertical axis to separate them. One fresh tab per prompt is still simplest.
+- **START pressed too early** (while the model is still working on a new prompt) draws from
+  the previous pool. The `Run` column shows this.
+- The Sampler is pinned to v1.0.5, the version these were tested with.
+- Check after any change: `cd ../tools && node sampler-test.js` (and `--quick` for 4.x).
+
+## Notes for the interviewer instructions (v01)
 
 - **Access code.** The Mad Libs templates (4.x, 5) need an access code, entered once per
   browser under ⚙️ Inference Backend. It's not obvious: paste the code, then **click outside

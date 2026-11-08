@@ -1,5 +1,32 @@
 # Development Log
 
+## 2026-11-08: v08 — students drive the plugin
+
+For the next interview phase students operate CODAP themselves.
+
+- **No Sampler dropdown step.** `?pool=Answer` makes every prompt write its words to
+  `Words_Answer`. The section 5 template (v02) ships that pool with a placeholder word and the
+  Sampler already set to it. Whenever a data context is created or deleted, the Sampler
+  (v1.0.4 and v1.0.5) lists the contexts again, re-selects the one with its saved name and
+  re-reads its items, so recreating the pool is enough. Tested headlessly
+  (`tools/sampler-test.js`): START pressed while the model is still working draws the old pool
+  (or the placeholder); a pool swapped in mid-draw doesn't affect that draw, because the
+  Sampler copies the pool at START; quick prompt/draw cycles never drew from an old pool.
+- **Prompt, Run, Settings columns.** Each pool item carries the prompt, a run label
+  (`2 · 10:42:05`) and the model/top-K/temperature/plugin build. The Sampler copies every
+  pool column into its draws, so draws from different prompts or versions stay
+  distinguishable, including in saved documents.
+- **`?mode=student`** hides temperature/top-K, table label, refresh/reset, the reveal,
+  direct-sampling, prompt-engineering and backend panels, and the log. The backend panel
+  reappears, showing only the access-code box, if a code is needed.
+- **One button.** Prepare parses the prompt if it changed; Parse Template is still there for
+  multi-slot work outside student mode. Student mode checks the prompt: one blank, one word
+  in the brackets, at the very end (the model only sees the words before the blank).
+- **Progress.** The status bar counts seconds while the model works and says to wait before
+  pressing START.
+- **No server URL in the file.** The default is empty; templates pass `?server=`.
+- Templates v02 also pin the Sampler to `sampler.concord.org/version/v1.0.5/`.
+
 ## 2026-04-01: v06 — Editable table labels, suppress sentences table
 
 ### Changes
